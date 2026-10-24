@@ -12,7 +12,7 @@ auth:
   - { env: WP_SITE, label: Site, help: "https://myblog.com, no trailing slash" }
   - { env: WP_USER, label: User name }
   - { env: WP_APP_PASSWORD, label: Application password, help: "Users → Profile → Application Passwords in wp-admin" }
-hosts: ["*"]
+hosts: ["${WP_SITE}"]
 tools:
   - name: publish_article
     label: Publishing to WordPress
@@ -21,7 +21,8 @@ tools:
     request:
       method: POST
       url: "${WP_SITE}/wp-json/wp/v2/posts"
-      headers: { Authorization: "Basic ${WP_BASIC}", Content-Type: application/json }
+      basic_auth: ["${WP_USER}", "${WP_APP_PASSWORD}"]
+      headers: { Content-Type: application/json }
       json: { title: "{{title}}", content: "{{html}}", status: "{{status|draft}}" }
       timeout_s: 60
     result: { text: /link }
