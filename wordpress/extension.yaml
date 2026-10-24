@@ -1,0 +1,33 @@
+# Publish articles to a WordPress site through its REST API, with an
+# application password. Each project connects its own site and user.
+id: wordpress
+name: Publish articles to WordPress
+version: 0.1.0
+summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Each project connects its own site. Every publish asks you first."
+categories: [publishing]
+icon: newspaper
+transport: http
+homepage: https://wordpress.org/documentation/article/application-passwords/
+auth:
+  - { env: WP_SITE, label: Site, help: "https://myblog.com, no trailing slash" }
+  - { env: WP_USER, label: User name }
+  - { env: WP_APP_PASSWORD, label: Application password, help: "Users → Profile → Application Passwords in wp-admin" }
+hosts: ["*"]
+tools:
+  - name: publish_article
+    label: Publishing to WordPress
+    description: Create a post from a title and HTML body; `status` is draft (default) or publish.
+    input: { type: object, properties: { title: { type: string }, html: { type: string }, status: { type: string, enum: [draft, publish] } }, required: [title, html] }
+    request:
+      method: POST
+      url: "${WP_SITE}/wp-json/wp/v2/posts"
+      headers: { Authorization: "Basic ${WP_BASIC}", Content-Type: application/json }
+      json: { title: "{{title}}", content: "{{html}}", status: "{{status|draft}}" }
+      timeout_s: 60
+    result: { text: /link }
+channels:
+  - kind: wordpress
+    label: WordPress blog
+    publish: publish_article
+    destination:
+      status: { type: string, label: "Publish as", help: "draft or publish", optional: true }
