@@ -2,8 +2,8 @@
 # application password. Each project connects its own site and user.
 id: wordpress
 name: Publish articles to WordPress
-version: 0.1.0
-summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Each project connects its own site. Every publish asks you first."
+version: 0.2.0
+summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Each project connects its own site with one button. Every publish asks you first."
 categories: [publishing]
 avatar: avatar.svg
 icon: newspaper
@@ -14,6 +14,19 @@ auth:
   - { env: WP_USER, label: User name }
   - { env: WP_APP_PASSWORD, label: Application password, help: "Users → Profile → Application Passwords in wp-admin" }
 hosts: ["${WP_SITE}"]
+# One button instead of the three keys: WordPress's own "Authorize application"
+# page (WordPress 5.6 and later) makes an application password for KIQR and
+# sends it back. WordPress only sends it back over https; on a plain-http KIQR
+# the page shows it once and the user pastes it.
+connect:
+  label: Connect with WordPress
+  flow: redirect
+  needs: [WP_SITE]
+  url: "${WP_SITE}/wp-admin/authorize-application.php?app_name=KIQR&app_id={{app_id}}"
+  callback_params: [success_url, reject_url]
+  callback: https
+  returns: { WP_SITE: site_url, WP_USER: user_login, WP_APP_PASSWORD: password }
+  denied: { param: success, equals: "false" }
 tools:
   - name: publish_article
     label: Publishing to WordPress
