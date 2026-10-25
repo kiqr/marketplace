@@ -2,7 +2,7 @@
 # application password. Each project connects its own site and user.
 id: wordpress
 name: Publish articles to WordPress
-version: 0.2.0
+version: 0.3.0
 summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Each project connects its own site with one button. Every publish asks you first."
 categories: [publishing]
 avatar: avatar.svg
@@ -30,16 +30,29 @@ connect:
 tools:
   - name: publish_article
     label: Publishing to WordPress
-    description: Create a post from a title and HTML body; `status` is draft (default) or publish.
+    description: Create a post from a title and HTML body; `status` is draft (default) or publish. The asset's image, when it has one, becomes the post's featured image.
     input: { type: object, properties: { title: { type: string }, html: { type: string }, status: { type: string, enum: [draft, publish] } }, required: [title, html] }
-    request:
-      method: POST
-      url: "${WP_SITE}/wp-json/wp/v2/posts"
-      basic_auth: ["${WP_USER}", "${WP_APP_PASSWORD}"]
-      headers: { Content-Type: application/json }
-      json: { title: "{{title}}", content: "{{html}}", status: "{{status|draft}}" }
-      timeout_s: 60
-    result: { text: /link }
+    steps:
+      # The image first, into the media library, so the post can name it.
+      - name: cover
+        when: "{{files}}"
+        request:
+          method: POST
+          url: "${WP_SITE}/wp-json/wp/v2/media"
+          basic_auth: ["${WP_USER}", "${WP_APP_PASSWORD}"]
+          headers: { Content-Disposition: 'attachment; filename="{{files.0.name}}"' }
+          body_file: "{{files.0}}"
+          timeout_s: 120
+        save: { id: /id }
+      - name: post
+        request:
+          method: POST
+          url: "${WP_SITE}/wp-json/wp/v2/posts"
+          basic_auth: ["${WP_USER}", "${WP_APP_PASSWORD}"]
+          json: { title: "{{title}}", content: "{{html}}", status: "{{status|draft}}", featured_media: "{{cover.id}}" }
+          timeout_s: 60
+        save: { link: /link }
+    result: { text: "{{post.link}}" }
 channels:
   - kind: wordpress
     label: WordPress blog

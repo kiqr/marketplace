@@ -71,6 +71,10 @@ the KIQR repository; the folders here are worked examples.
   `writing`; see "Networks" in `docs/abilities.md`) and list `kind`, `name`,
   `icon` and `profile_hosts` under `channels` in the index entry, so KIQR
   recognises the business's profile there and can suggest your ability.
+- Sending the asset's image, or a call that takes several requests
+  (register an upload, send the bytes, create the post)? Use `steps` and the
+  upload bodies (`multipart`, `form`, `body_file`); see "Steps" and
+  "Uploading files" in `docs/abilities.md`. `wordpress/` is a worked example.
 - Add an entry to `index.json` with the same `id`, your `repo` and the
   folder as `path`. Copy a neighbouring entry and change every field; the
   entry is what the card shows before the ability is installed, so it must
