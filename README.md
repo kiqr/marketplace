@@ -66,6 +66,11 @@ the KIQR repository; the folders here are worked examples.
   needs and what it costs, in the user's words.
 - Add an `avatar.svg`, 64 by 64, on a dark background, and name it in the
   manifest (`avatar: avatar.svg`).
+- Publishing to a social network? Declare the network on the channel kind
+  (`name`, `icon`, `profile_hosts`, `text_limit`, `image`, `preview`,
+  `writing`; see "Networks" in `docs/abilities.md`) and list `kind`, `name`,
+  `icon` and `profile_hosts` under `channels` in the index entry, so KIQR
+  recognises the business's profile there and can suggest your ability.
 - Add an entry to `index.json` with the same `id`, your `repo` and the
   folder as `path`. Copy a neighbouring entry and change every field; the
   entry is what the card shows before the ability is installed, so it must
