@@ -12,6 +12,7 @@ index.json          what the marketplace shows: id, name, author, summary, versi
                     repo + path (where the folder is), categories, cost, keys
 <id>/extension.yaml the ability's connection: what it provides, needs, how it is called (optional)
 <id>/SKILL.md       its instructions: how Seemo does this, in plain words (optional)
+<id>/avatar.svg     a 64×64 mark shown on the card and in the list (optional; `avatar` in the index is its URL)
 
 An ability is one of these or both. Instructions on their own (a shared recipe)
 are an ability too: give the index entry `transport: instructions`.

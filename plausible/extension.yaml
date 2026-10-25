@@ -5,6 +5,7 @@ name: Read Plausible Analytics
 version: 0.1.0
 summary: "Visitors, visits and page views per day from Plausible, hosted or self-hosted, once a day into Performance."
 categories: [analytics]
+avatar: avatar.svg
 icon: chart
 transport: builtin
 homepage: https://plausible.io/docs/stats-api

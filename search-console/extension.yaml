@@ -5,6 +5,7 @@ name: Read Google Search Console
 version: 0.1.0
 summary: "Clicks, impressions, click-through rate and average position per day, with the top queries and pages, once a day into Performance. Needs the service account added as a user on the property."
 categories: [analytics, seo]
+avatar: avatar.svg
 icon: search
 transport: builtin
 homepage: https://developers.google.com/webmaster-tools/v1/searchanalytics/query

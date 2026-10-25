@@ -5,6 +5,7 @@ name: Send email from your mail account
 version: 0.1.0
 summary: "Email over SMTP: Gmail with an app password, Fastmail, Outlook or any mail host. Each project connects its own account. Every send asks you first."
 categories: [email, publishing]
+avatar: avatar.svg
 icon: mail
 transport: builtin
 homepage: https://support.google.com/accounts/answer/185833
