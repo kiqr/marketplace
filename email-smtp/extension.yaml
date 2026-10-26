@@ -2,8 +2,8 @@
 # or any mail host. Values live in .env; the daemon sends.
 id: kiqr-smtp
 name: Send email from your mail account
-version: 0.2.0
-summary: "Email over SMTP: Gmail with an app password, Fastmail, Outlook or any mail host. Each project connects its own account. Every send asks you first."
+version: 0.2.1
+summary: "Email over SMTP: Gmail with an app password, Fastmail, Outlook or any mail host. Each channel has its own account, or shares one. Every send asks you first."
 categories: [email, publishing]
 avatar: avatar.svg
 icon: mail

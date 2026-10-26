@@ -75,6 +75,11 @@ the KIQR repository; the folders here are worked examples.
   (register an upload, send the bytes, create the post)? Use `steps` and the
   upload bodies (`multipart`, `form`, `body_file`); see "Steps" and
   "Uploading files" in `docs/abilities.md`. `wordpress/` is a worked example.
+- Describe one account. Installing puts your ability on the machine with no
+  keys; each project then adds as many accounts of it as it wants (two
+  sites, two mail accounts), and for a publishing ability each channel is
+  one account. So `auth` and `connect` describe a single account, and the
+  summary says "add a channel per site", not "connect your site".
 - Add an entry to `index.json` with the same `id`, your `repo` and the
   folder as `path`. Copy a neighbouring entry and change every field; the
   entry is what the card shows before the ability is installed, so it must
@@ -87,9 +92,9 @@ will do:
 
 1. Setup → Abilities: the card shows your name, summary, avatar, cost and
    keys. Install it.
-2. Connect it with a real key or account on a test project. The switch
-   turns on only when it is ready; if it stays off, the manifest's `auth`
-   or `hosts` are wrong.
+2. Add an account (or a channel) with a real key on a test project, then a
+   second one. The switch turns on only when an account is ready; if it
+   stays off, the manifest's `auth` or `hosts` are wrong.
 3. Ask Seemo to use it in a chat, and let a task use it once. For a
    publishing ability, publish a real draft to a test account and check the
    permalink lands on the asset. For instructions, ask for the kind of work

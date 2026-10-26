@@ -1,9 +1,9 @@
 # Publish articles to a WordPress site through its REST API, with an
-# application password. Each project connects its own site and user.
+# application password. Each channel is one site, with its own account.
 id: wordpress
 name: Publish articles to WordPress
-version: 0.3.0
-summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Each project connects its own site with one button. Every publish asks you first."
+version: 0.3.2
+summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Add a channel per site; each signs in with one button. Every publish asks you first."
 categories: [publishing]
 avatar: avatar.svg
 icon: newspaper
@@ -31,7 +31,7 @@ tools:
   - name: publish_article
     label: Publishing to WordPress
     description: Create a post from a title and HTML body; `status` is draft (default) or publish. The asset's image, when it has one, becomes the post's featured image.
-    input: { type: object, properties: { title: { type: string }, html: { type: string }, status: { type: string, enum: [draft, publish] } }, required: [title, html] }
+    input: { type: object, properties: { title: { type: string }, html: { type: string }, status: { type: string, enum: [draft, publish], description: "draft (default) or publish; publish only when the user asked for it to go live" } }, required: [title, html] }
     steps:
       # The image first, into the media library, so the post can name it.
       - name: cover
@@ -57,5 +57,5 @@ channels:
   - kind: wordpress
     label: WordPress blog
     publish: publish_article
-    destination:
-      status: { type: string, label: "Publish as", help: "draft or publish", optional: true }
+    # Draft or live is chosen per publish (the tool's `status`), not per site.
+    destination: {}
