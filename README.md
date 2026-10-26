@@ -75,6 +75,9 @@ the KIQR repository; the folders here are worked examples.
   (register an upload, send the bytes, create the post)? Use `steps` and the
   upload bodies (`multipart`, `form`, `body_file`); see "Steps" and
   "Uploading files" in `docs/abilities.md`. `wordpress/` is a worked example.
+- A key with a fixed set of values (a security mode, a region) lists them in
+  `options`; KIQR shows a list instead of a text field and refuses anything
+  else. A destination field does the same with `enum`.
 - Describe one account. Installing puts your ability on the machine with no
   keys; each project then adds as many accounts of it as it wants (two
   sites, two mail accounts), and for a publishing ability each channel is
