@@ -2,7 +2,7 @@
 # page views per day through the Stats API.
 id: plausible
 name: Read Plausible Analytics
-version: 0.2.0
+version: 0.2.1
 summary: "Visitors, visits and page views per day from Plausible, hosted or self-hosted, once a day into Performance."
 categories: [analytics]
 avatar: avatar.svg
@@ -11,9 +11,9 @@ transport: http
 homepage: https://plausible.io/docs/stats-api
 hosts: [plausible.io, "${PLAUSIBLE_HOST}"]
 auth:
-  - { env: PLAUSIBLE_SITE_ID, label: Site, help: "The domain as Plausible shows it, e.g. example.com" }
+  - { env: PLAUSIBLE_SITE_ID, label: Site, help: "The domain as Plausible shows it", placeholder: "yoursite.com" }
   - { env: PLAUSIBLE_API_KEY, label: API key, help: "Settings → API keys in Plausible" }
-  - { env: PLAUSIBLE_HOST, label: Host, help: "Only for self-hosted Plausible, e.g. https://plausible.example.com", optional: true }
+  - { env: PLAUSIBLE_HOST, label: Host, help: "Only for self-hosted Plausible", placeholder: "https://plausible.yoursite.com", optional: true }
 sources:
   traffic:
     requests:

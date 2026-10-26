@@ -2,7 +2,7 @@
 # application password. Each channel is one site, with its own account.
 id: wordpress
 name: Publish articles to WordPress
-version: 0.3.3
+version: 0.3.4
 summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Add a channel per site; each signs in with one button. Every publish asks you first."
 categories: [publishing]
 avatar: avatar.svg
@@ -10,8 +10,8 @@ icon: newspaper
 transport: http
 homepage: https://wordpress.org/documentation/article/application-passwords/
 auth:
-  - { env: WP_SITE, label: Your site's address, help: "https://myblog.com" }
-  - { env: WP_USER, label: User name }
+  - { env: WP_SITE, label: Your site's address, placeholder: "https://yoursite.com" }
+  - { env: WP_USER, label: User name, placeholder: "Your WordPress user name" }
   - { env: WP_APP_PASSWORD, label: Application password, help: "Users → Profile → Application Passwords in wp-admin" }
 hosts: ["${WP_SITE}"]
 # One button instead of the three keys: WordPress's own "Authorize application"

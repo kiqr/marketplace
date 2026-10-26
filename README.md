@@ -75,6 +75,9 @@ the KIQR repository; the folders here are worked examples.
   (register an upload, send the bytes, create the post)? Use `steps` and the
   upload bodies (`multipart`, `form`, `body_file`); see "Steps" and
   "Uploading files" in `docs/abilities.md`. `wordpress/` is a worked example.
+- Give each key a `placeholder` (what a value looks like, shown inside the
+  empty field) and keep `help` for where to get it. Destination fields take
+  the same two.
 - A key with a fixed set of values (a security mode, a region) lists them in
   `options`; KIQR shows a list instead of a text field and refuses anything
   else. A destination field does the same with `enum`.

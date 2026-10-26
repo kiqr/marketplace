@@ -2,7 +2,7 @@
 # or any mail host. Values live in .env; the daemon sends.
 id: kiqr-smtp
 name: Send email from your mail account
-version: 0.2.3
+version: 0.2.4
 summary: "Email over SMTP: Gmail with an app password, Fastmail, Outlook or any mail host. Each channel has its own account, or shares one. Every send asks you first."
 categories: [email, publishing]
 avatar: avatar.svg
@@ -10,12 +10,12 @@ icon: mail
 transport: smtp
 homepage: https://support.google.com/accounts/answer/185833
 auth:
-  - { env: SMTP_HOST, label: Mail server, help: "Gmail: smtp.gmail.com" }
-  - { env: SMTP_PORT, label: Port, help: "Usually 587 (STARTTLS) or 465 (TLS)", optional: true }
-  - { env: SMTP_USER, label: User name, help: "Usually your email address" }
+  - { env: SMTP_HOST, label: Mail server, placeholder: "smtp.gmail.com" }
+  - { env: SMTP_PORT, label: Port, placeholder: "587", optional: true }
+  - { env: SMTP_USER, label: User name, placeholder: "you@yourcompany.com" }
   - { env: SMTP_PASSWORD, label: Password or app password, help: "Gmail needs an app password: https://myaccount.google.com/apppasswords" }
-  - { env: SMTP_FROM, label: From address, help: "What recipients see, e.g. Jane <jane@example.com>", optional: true }
-  - { env: SMTP_SECURITY, label: Security, help: "starttls (default, port 587), tls (port 465) or none (a relay on this machine only)", optional: true, options: [starttls, tls, none] }
+  - { env: SMTP_FROM, label: From address, placeholder: "Your Name <you@yourcompany.com>", optional: true }
+  - { env: SMTP_SECURITY, label: Security, help: "starttls for port 587, tls for 465, none only for a relay on this machine", optional: true, options: [starttls, tls, none] }
 smtp:
   host: "${SMTP_HOST}"
   port: "${SMTP_PORT}"
@@ -31,5 +31,5 @@ channels:
     label: Email
     publish: email
     destination:
-      to: { type: string, label: "To", help: "One address, or several separated by commas" }
-      subject: { type: string, label: "Subject", help: "Leave empty to use the asset's title", optional: true }
+      to: { type: string, label: "To", placeholder: "name@company.com, other@company.com" }
+      subject: { type: string, label: "Subject", placeholder: "The article's title", optional: true }
