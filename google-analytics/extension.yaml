@@ -7,8 +7,8 @@
 # landing pages and sources over the window.
 id: google-analytics
 name: Read Google Analytics
-version: 0.3.0
-summary: "Sessions, users, page views, key events, your top pages and where visits come from, once a day into Performance. Connect with Google in one click, or use a service account."
+version: 0.4.0
+summary: "Sessions, users, page views, key events, your top pages and where visits come from, once a day into Performance, and any report Seemo asks for. Connect with Google in one click, or use a service account."
 categories: [analytics]
 avatar: avatar.svg
 icon: chart
@@ -52,6 +52,154 @@ connect:
     token_url: https://oauth2.googleapis.com/token
     scopes: [https://www.googleapis.com/auth/analytics.readonly]
     token_env: GA4_TOKEN
+# Seemo's own questions, beside the daily numbers: reports it composes, live
+# visitors, and how the property is set up. All read-only, through the same
+# account and property as the daily pull.
+tools:
+  - name: ga_run_report
+    label: Asking Google Analytics
+    description: "Run a GA4 report on this account's property: any dimensions and metrics over a date range, with filters, ordering and a limit. Use ga_list_fields for the names this property has (custom ones included) and ga_check_compatibility when a combination is refused. Dates are YYYY-MM-DD or relative (today, yesterday, 28daysAgo). Answers come as rows of dimensionValues and metricValues in the order asked."
+    input:
+      type: object
+      properties:
+        dimensions: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] }, description: "e.g. [{name: date}, {name: landingPage}, {name: sessionSourceMedium}]" }
+        metrics: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] }, description: "e.g. [{name: sessions}, {name: keyEvents}, {name: engagementRate}]" }
+        start_date: { type: string, description: "Default 28daysAgo" }
+        end_date: { type: string, description: "Default yesterday" }
+        dimension_filter: { type: object, description: "A GA4 FilterExpression, e.g. {filter: {fieldName: sessionSource, stringFilter: {value: linkedin, matchType: CONTAINS}}}" }
+        metric_filter: { type: object, description: "A GA4 FilterExpression on metrics" }
+        order_bys: { type: array, items: { type: object }, description: "e.g. [{metric: {metricName: sessions}, desc: true}]" }
+        limit: { type: integer, description: "Rows, default 100, at most 10000" }
+        offset: { type: integer }
+      required: [metrics]
+    request:
+      method: POST
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      json: { dateRanges: [{ startDate: "{{start_date|28daysAgo}}", endDate: "{{end_date|yesterday}}" }], dimensions: "{{dimensions}}", metrics: "{{metrics}}", dimensionFilter: "{{dimension_filter}}", metricFilter: "{{metric_filter}}", orderBys: "{{order_bys}}", limit: "{{limit|100}}", offset: "{{offset}}" }
+      timeout_s: 60
+  - name: ga_pivot_report
+    label: Pivoting Google Analytics
+    description: "Run a GA4 pivot report: the same dimensions and metrics as ga_run_report, with pivots that turn dimension values into columns (e.g. sessions per channel per month)."
+    input:
+      type: object
+      properties:
+        dimensions: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] } }
+        metrics: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] } }
+        pivots: { type: array, items: { type: object }, description: "GA4 Pivot objects, e.g. [{fieldNames: [sessionDefaultChannelGroup], limit: 10}, {fieldNames: [month], limit: 12}]" }
+        start_date: { type: string }
+        end_date: { type: string }
+        dimension_filter: { type: object }
+      required: [dimensions, metrics, pivots]
+    request:
+      method: POST
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runPivotReport"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      json: { dateRanges: [{ startDate: "{{start_date|28daysAgo}}", endDate: "{{end_date|yesterday}}" }], dimensions: "{{dimensions}}", metrics: "{{metrics}}", pivots: "{{pivots}}", dimensionFilter: "{{dimension_filter}}" }
+      timeout_s: 60
+  - name: ga_realtime_report
+    label: Looking at who is on the site now
+    description: "Visitors in the last 30 minutes (or the minutes given): e.g. activeUsers by country, unifiedScreenName or deviceCategory. Realtime has its own, shorter list of dimensions and metrics."
+    input:
+      type: object
+      properties:
+        dimensions: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] }, description: "e.g. [{name: unifiedScreenName}]" }
+        metrics: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] }, description: "e.g. [{name: activeUsers}]" }
+        minutes_ago: { type: integer, description: "How far back, at most 29 (default 29)" }
+        limit: { type: integer }
+      required: [metrics]
+    request:
+      method: POST
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runRealtimeReport"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      json: { dimensions: "{{dimensions}}", metrics: "{{metrics}}", minuteRanges: [{ startMinutesAgo: "{{minutes_ago|29}}", endMinutesAgo: 0 }], limit: "{{limit|50}}" }
+      timeout_s: 30
+  - name: ga_check_compatibility
+    label: Checking a Google Analytics combination
+    description: "Which of the given dimensions and metrics can be used together in one report on this property, before running it."
+    input:
+      type: object
+      properties:
+        dimensions: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] } }
+        metrics: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] } }
+    request:
+      method: POST
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:checkCompatibility"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      json: { dimensions: "{{dimensions}}", metrics: "{{metrics}}" }
+      timeout_s: 30
+  - name: ga_list_fields
+    label: Reading what Google Analytics measures
+    description: "Every dimension and metric this property can report on, with its API name, description and category, custom dimensions and metrics included."
+    request:
+      method: GET
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/metadata"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 30
+  - name: ga_list_properties
+    label: Listing Google Analytics properties
+    description: "The GA4 accounts and properties this sign-in can see (each account of the ability reads one of them)."
+    request:
+      method: GET
+      url: "https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 20
+  - name: ga_property
+    label: Reading the property's settings
+    description: "The property's name, time zone, currency, industry and when it was created."
+    request:
+      method: GET
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 20
+  - name: ga_data_retention
+    label: Reading how long data is kept
+    description: "How long the property keeps event and user data, which limits how far back explorations go."
+    request:
+      method: GET
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/dataRetentionSettings"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 20
+  - name: ga_data_streams
+    label: Reading the property's data streams
+    description: "The web sites and apps that send data to the property, with their measurement ids and URLs."
+    request:
+      method: GET
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/dataStreams?pageSize=200"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 20
+  - name: ga_key_events
+    label: Reading the key events
+    description: "The events the property counts as key events (conversions), and how each is counted."
+    request:
+      method: GET
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/keyEvents?pageSize=200"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 20
+  - name: ga_custom_dimensions
+    label: Reading the custom dimensions
+    description: "The property's custom dimensions: their names, scope (event, user, item) and the parameter each reads."
+    request:
+      method: GET
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/customDimensions?pageSize=200"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 20
+  - name: ga_custom_metrics
+    label: Reading the custom metrics
+    description: "The property's custom metrics: their names, units and the parameter each reads."
+    request:
+      method: GET
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/customMetrics?pageSize=200"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 20
+  - name: ga_ads_links
+    label: Reading the Google Ads links
+    description: "The Google Ads accounts linked to the property, so ad clicks and costs can show in its reports."
+    request:
+      method: GET
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/googleAdsLinks?pageSize=200"
+      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      timeout_s: 20
 sources:
   traffic:
     requests:
