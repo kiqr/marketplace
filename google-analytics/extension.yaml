@@ -1,31 +1,61 @@
-# Google Analytics 4 through the Data API with a service account. The key
-# file stays on this machine; KIQR reads sessions, users, page views, organic
-# sessions and key events for the last 30 days, once a day, into snapshots.
+# Google Analytics 4 through the Data API. Connect with Google in one click
+# (kiqr.cloud holds KIQR's Google app and finishes the sign-in; no token is
+# kept there), or use a service account's key file on this machine. Either
+# way the account then picks one of the properties it can see. Once a day
+# KIQR reads the last 30 days into snapshots: the day's sessions, users,
+# page views and key events by channel, key events by name, and the top
+# landing pages and sources over the window.
 id: google-analytics
 name: Read Google Analytics
-version: 0.2.1
-summary: "Sessions, users, page views, organic sessions and key events from a GA4 property, once a day into Performance. Needs a service account added as a viewer on the property."
+version: 0.3.0
+summary: "Sessions, users, page views, key events, your top pages and where visits come from, once a day into Performance. Connect with Google in one click, or use a service account."
 categories: [analytics]
 avatar: avatar.svg
 icon: chart
 transport: http
 homepage: https://developers.google.com/analytics/devguides/reporting/data/v1
-hosts: [analyticsdata.googleapis.com, oauth2.googleapis.com]
+hosts: [analyticsdata.googleapis.com, analyticsadmin.googleapis.com, oauth2.googleapis.com]
 auth:
-  - { env: GA4_PROPERTY_ID, label: GA4 property id, help: "The number under Admin → Property settings", placeholder: "123456789" }
-  - { env: GOOGLE_SERVICE_ACCOUNT_FILE, label: Service account key file, help: "Path on this machine to the JSON key of a service account that is a Viewer on the property (Google Cloud → IAM → Service accounts → Keys)" }
-# The service account signs in by itself: KIQR signs a JWT with the key file
-# and exchanges it for a token at Google, offered to the requests as
-# ${GA4_TOKEN} (never stored).
+  - env: GA4_PROPERTY_ID
+    label: GA4 property
+    help: "Pick it once the account is connected, or type the number under Admin → Property settings"
+    placeholder: "123456789"
+    # The properties the signed-in account can see.
+    choices:
+      request:
+        method: GET
+        url: "https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200"
+        headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+        timeout_s: 20
+      list: /accountSummaries/*/propertySummaries/*
+      value: /property
+      label: /displayName
+      strip: "properties/"
+  # Kept by "Connect with Google"; never typed.
+  - { env: GA4_TOKEN, label: Google sign-in, optional: true }
+  - env: GOOGLE_SERVICE_ACCOUNT_FILE
+    label: Service account key file
+    optional: true
+    help: "Instead of connecting with Google: the path on this machine to the JSON key of a service account that is a Viewer on the property (Google Cloud → IAM → Service accounts → Keys)"
 connect:
-  flow: service_account
-  key_file: GOOGLE_SERVICE_ACCOUNT_FILE
-  token_url: https://oauth2.googleapis.com/token
-  scopes: [https://www.googleapis.com/auth/analytics.readonly]
-  token_env: GA4_TOKEN
+  # One click: kiqr.cloud holds the Google app, the browser comes back through its relay.
+  - label: Connect with Google
+    flow: cloud
+    provider: google
+    scopes: [https://www.googleapis.com/auth/analytics.readonly]
+    token_env: GA4_TOKEN
+    refresh_env: GA4_REFRESH_TOKEN
+  # Or a service account: KIQR signs a JWT with the key file and exchanges it
+  # for a token at Google, offered to the requests as ${GA4_TOKEN} (never stored).
+  - flow: service_account
+    key_file: GOOGLE_SERVICE_ACCOUNT_FILE
+    token_url: https://oauth2.googleapis.com/token
+    scopes: [https://www.googleapis.com/auth/analytics.readonly]
+    token_env: GA4_TOKEN
 sources:
   traffic:
     requests:
+      # Per day and channel: the day's totals and the channel breakdown.
       - request:
           method: POST
           url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
@@ -40,6 +70,43 @@ sources:
         date: /dimensionValues/0/value
         dims: { channel: /dimensionValues/1/value }
         metrics: { sessions: /metricValues/0/value, users: /metricValues/1/value, pageviews: /metricValues/2/value, key_events: /metricValues/3/value }
+        breakdown: [sessions]
+        skip_zero: true
+      # The 50 landing pages with the most sessions over the window, with their key events.
+      - request:
+          method: POST
+          url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
+          headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+          json:
+            dateRanges: [{ startDate: "{{from}}", endDate: "{{to}}" }]
+            dimensions: [{ name: landingPage }]
+            metrics: [{ name: sessions }, { name: keyEvents }]
+            orderBys: [{ metric: { metricName: sessions }, desc: true }]
+            limit: 50
+          timeout_s: 40
+        rows: /rows
+        date: "{{to}}"
+        dims: { page: /dimensionValues/0/value }
+        metrics: { sessions: /metricValues/0/value, key_events: /metricValues/1/value }
+        totals: []
+        skip_zero: true
+      # Where visits come from (source / medium, so KIQR's own UTM links show), top 25 over the window.
+      - request:
+          method: POST
+          url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
+          headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+          json:
+            dateRanges: [{ startDate: "{{from}}", endDate: "{{to}}" }]
+            dimensions: [{ name: sessionSourceMedium }]
+            metrics: [{ name: sessions }, { name: keyEvents }]
+            orderBys: [{ metric: { metricName: sessions }, desc: true }]
+            limit: 25
+          timeout_s: 40
+        rows: /rows
+        date: "{{to}}"
+        dims: { source: /dimensionValues/0/value }
+        metrics: { sessions: /metricValues/0/value, key_events: /metricValues/1/value }
+        totals: []
         breakdown: [sessions]
         skip_zero: true
     derive:
