@@ -1,0 +1,164 @@
+# GitHub through its REST and GraphQL APIs, for a product whose repository
+# is part of its marketing: how the repository does (stars, traffic, where
+# visitors come from), what people say in issues and discussions here and
+# elsewhere, and the replies and changes Seemo proposes. Connect with GitHub
+# in one click (kiqr.cloud holds KIQR's GitHub app; no token is kept there),
+# or paste a personal access token. Reading runs at once; anything that
+# writes (a comment, the topics, the About line, a draft release) asks first.
+id: github
+name: Work on GitHub
+version: 0.1.0
+summary: "Your repository's stars, traffic and referrers, what people say in issues and discussions, and replies and repository changes Seemo proposes for your yes. Connect with GitHub in one click, or paste a token."
+categories: [community, analytics]
+avatar: avatar.svg
+icon: github
+transport: http
+homepage: https://docs.github.com/en/rest
+hosts: [api.github.com]
+auth:
+  - env: GITHUB_REPO
+    label: Repository
+    help: "The repository this account works on, as owner/name: pick it once connected"
+    placeholder: "owner/name"
+    choices:
+      request:
+        method: GET
+        url: "https://api.github.com/user/repos"
+        query: { per_page: "100", sort: pushed, visibility: public }
+        headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }
+        timeout_s: 20
+      list: /*
+      value: /full_name
+      label: /full_name
+  - env: GITHUB_TOKEN
+    label: GitHub sign-in or token
+    optional: true
+    typed: true
+    help: "Kept by Connect with GitHub. Or paste a token instead: https://github.com/settings/personal-access-tokens (read access to the repository; write to issues and administration for comments, topics and releases)"
+connect:
+  - label: Connect with GitHub
+    flow: cloud
+    provider: github
+    scopes: [public_repo, read:user, read:org]
+    token_env: GITHUB_TOKEN
+tools:
+  # ------------------------------------------------------------ the repository
+  - name: gh_repo
+    label: Reading the repository
+    description: "The repository: description, homepage, topics, stars, forks, watchers, open issues, language, licence, when it was last pushed."
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_list_repos
+    label: Listing GitHub repositories
+    description: "The public repositories this sign-in can see, most recently pushed first, with their stars."
+    request: { method: GET, url: "https://api.github.com/user/repos", query: { per_page: "100", sort: pushed, visibility: public }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_releases
+    label: Reading the releases
+    description: "The latest releases with their notes: what shipped and when (material for posts and changelogs)."
+    input: { type: object, properties: { limit: { type: integer, description: "Default 10, at most 100" } } }
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/releases", query: { per_page: "{{limit|10}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_commits
+    label: Reading the latest commits
+    description: "The latest commits on the default branch (or `branch`), with their messages and authors."
+    input: { type: object, properties: { branch: { type: string }, since: { type: string, description: "ISO 8601, e.g. 2026-10-01T00:00:00Z" }, limit: { type: integer } } }
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/commits", query: { sha: "{{branch}}", since: "{{since}}", per_page: "{{limit|20}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_contributors
+    label: Reading the contributors
+    description: "The people who contribute to the repository, by number of commits."
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/contributors", query: { per_page: "30" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  # ------------------------------------------------------------------ traffic
+  - name: gh_traffic_views
+    label: Reading the repository's views
+    description: "Views and unique visitors of the repository per day for the last 14 days (needs write access to the repository)."
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/traffic/views", query: { per: day }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_traffic_clones
+    label: Reading the repository's clones
+    description: "Clones and unique cloners per day for the last 14 days."
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/traffic/clones", query: { per: day }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_referrers
+    label: Reading where visitors come from
+    description: "The top sites that sent visitors to the repository over the last 14 days (Google, Hacker News, a blog post…)."
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/traffic/popular/referrers", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_popular_paths
+    label: Reading the most viewed pages
+    description: "The repository's most viewed pages (README, docs, files) over the last 14 days."
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/traffic/popular/paths", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  # --------------------------------------------------- issues and discussions
+  - name: gh_issues
+    label: Reading the issues
+    description: "Issues (and pull requests) of the repository, most recently updated first: what users ask for and complain about."
+    input: { type: object, properties: { state: { type: string, enum: [open, closed, all] }, labels: { type: string, description: "Comma-separated label names" }, limit: { type: integer } } }
+    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/issues", query: { state: "{{state|open}}", labels: "{{labels}}", sort: updated, per_page: "{{limit|30}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_issue
+    label: Reading an issue
+    description: "One issue or pull request: title, body, labels, state, author and reactions. In this account's repository, or another (`repo`)."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/issues/{{number}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_issue_comments
+    label: Reading an issue's comments
+    description: "The comments on an issue or pull request, oldest first: the whole conversation before replying."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/issues/{{number}}/comments", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_discussions
+    label: Reading the discussions
+    description: "Discussions in the repository (or matching `query` across GitHub when `everywhere` is true), newest first, with their category, comment count and first lines."
+    input: { type: object, properties: { query: { type: string, description: "Words to look for" }, everywhere: { type: boolean }, limit: { type: integer } } }
+    request:
+      method: POST
+      url: https://api.github.com/graphql
+      headers: { Authorization: "Bearer ${GITHUB_TOKEN}" }
+      json:
+        query: "query($q: String!, $n: Int!) { search(type: DISCUSSION, query: $q, first: $n) { nodes { ... on Discussion { number title url createdAt updatedAt author { login } category { name } comments { totalCount } bodyText repository { nameWithOwner } } } } }"
+        variables: { q: "{{query}} sort:updated-desc repo:${GITHUB_REPO}", n: "{{limit|20}}" }
+      timeout_s: 30
+  - name: gh_search_issues
+    label: Searching GitHub for mentions
+    description: "Search issues, pull requests and discussions across GitHub with GitHub's search syntax: mentions of the product or its competitors, questions it answers (e.g. `\"unblockingapi\" in:body`, `scraping cloudflare is:issue is:open`)."
+    input: { type: object, properties: { query: { type: string }, sort: { type: string, enum: [updated, created, comments, reactions] }, limit: { type: integer } }, required: [query] }
+    request: { method: GET, url: "https://api.github.com/search/issues", query: { q: "{{query}}", sort: "{{sort|updated}}", per_page: "{{limit|20}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_search_repos
+    label: Searching GitHub repositories
+    description: "Search repositories across GitHub: competitors, alternatives, awesome-lists the product belongs on (e.g. `topic:web-scraping stars:>100`)."
+    input: { type: object, properties: { query: { type: string }, sort: { type: string, enum: [stars, forks, updated] }, limit: { type: integer } }, required: [query] }
+    request: { method: GET, url: "https://api.github.com/search/repositories", query: { q: "{{query}}", sort: "{{sort|stars}}", per_page: "{{limit|20}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_me
+    label: Reading the GitHub account
+    description: "Who this sign-in is: login, name, profile, followers, and the organisations it belongs to."
+    request: { method: GET, url: "https://api.github.com/user", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  # ------------------------------------------------- writing: each asks first
+  - name: gh_comment
+    label: Replying on GitHub
+    description: "Comment on an issue or pull request, in this account's repository or another (`repo`). The user sees the reply and says yes first. One reply per issue: a second on the same issue is refused."
+    role: reply
+    target: "{{repo|${GITHUB_REPO}}}#{{number}}"
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer }, body: { type: string, description: "Markdown" } }, required: [number, body] }
+    request: { method: POST, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/issues/{{number}}/comments", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { body: "{{body}}" }, timeout_s: 30 }
+    result: { text: /html_url }
+  - name: gh_set_topics
+    label: Setting the repository's topics
+    description: "Replace the repository's topics (how people find it on GitHub): lowercase words with dashes, at most 20. Asks first."
+    role: manage
+    input: { type: object, properties: { topics: { type: array, items: { type: string } } }, required: [topics] }
+    request: { method: PUT, url: "https://api.github.com/repos/${GITHUB_REPO}/topics", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { names: "{{topics}}" }, timeout_s: 20 }
+  - name: gh_update_about
+    label: Changing the repository's About
+    description: "Change the repository's one-line description and its homepage link. Asks first."
+    role: manage
+    input: { type: object, properties: { description: { type: string }, homepage: { type: string } } }
+    request: { method: PATCH, url: "https://api.github.com/repos/${GITHUB_REPO}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { description: "{{description}}", homepage: "{{homepage}}" }, timeout_s: 20 }
+    result: { text: /html_url }
+  - name: gh_draft_release
+    label: Drafting release notes
+    description: "Draft a release (never published: a maintainer publishes it on GitHub) with a tag, a title and notes in Markdown. Asks first; one draft per tag."
+    role: manage
+    target: "release {{tag}}"
+    input: { type: object, properties: { tag: { type: string }, title: { type: string }, notes: { type: string } }, required: [tag, notes] }
+    request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/releases", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { tag_name: "{{tag}}", name: "{{title|{{tag}}}}", body: "{{notes}}", draft: true }, timeout_s: 30 }
+    result: { text: /html_url }
+  - name: gh_open_issue
+    label: Opening an issue on GitHub
+    description: "Open an issue in another repository (`repo`): to suggest the product for an awesome-list or an integration, or to report something. Asks first; one per repository and title."
+    role: reply
+    target: "{{repo}}: {{title}}"
+    input: { type: object, properties: { repo: { type: string, description: "owner/name" }, title: { type: string }, body: { type: string } }, required: [repo, title, body] }
+    request: { method: POST, url: "https://api.github.com/repos/{{repo}}/issues", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { title: "{{title}}", body: "{{body}}" }, timeout_s: 30 }
+    result: { text: /html_url }
