@@ -1,9 +1,12 @@
-# Google Search Console with the same service account as Analytics. Clicks,
-# impressions, CTR and position per day, plus the top queries and pages.
+# Google Search Console. Connect with Google in one click (kiqr.cloud holds
+# KIQR's Google app and finishes the sign-in; no token is kept there), or use
+# a service account's key file on this machine. Either way the account then
+# picks one of the properties it can see. Clicks, impressions, CTR and
+# position per day, plus the top queries and pages.
 id: search-console
 name: Read Google Search Console
-version: 0.2.1
-summary: "Clicks, impressions, click-through rate and average position per day, with the top queries and pages, once a day into Performance. Needs the service account added as a user on the property."
+version: 0.3.0
+summary: "Clicks, impressions, click-through rate and average position per day, with the top queries and pages, once a day into Performance. Connect with Google in one click, or use a service account."
 categories: [analytics, seo]
 avatar: avatar.svg
 icon: search
@@ -11,14 +14,40 @@ transport: http
 homepage: https://developers.google.com/webmaster-tools/v1/searchanalytics/query
 hosts: [searchconsole.googleapis.com, oauth2.googleapis.com]
 auth:
-  - { env: GSC_SITE_URL, label: Search Console property, help: "A domain property starts with sc-domain:; a URL-prefix property is its exact URL", placeholder: "sc-domain:yoursite.com" }
-  - { env: GOOGLE_SERVICE_ACCOUNT_FILE, label: Service account key file, help: "Path on this machine to the JSON key of a service account added as a user on the property" }
+  - env: GSC_SITE_URL
+    label: Search Console property
+    help: "Pick it once the account is connected, or type it: a domain property starts with sc-domain:; a URL-prefix property is its exact URL"
+    placeholder: "sc-domain:yoursite.com"
+    # The properties the signed-in account can see.
+    choices:
+      request:
+        method: GET
+        url: "https://searchconsole.googleapis.com/webmasters/v3/sites"
+        headers: { Authorization: "Bearer ${GSC_TOKEN}" }
+        timeout_s: 20
+      list: /siteEntry/*
+      value: /siteUrl
+  # Kept by "Connect with Google"; never typed.
+  - { env: GSC_TOKEN, label: Google sign-in, optional: true }
+  - env: GOOGLE_SERVICE_ACCOUNT_FILE
+    label: Service account key file
+    optional: true
+    help: "Instead of connecting with Google: the path on this machine to the JSON key of a service account added as a user on the property"
 connect:
-  flow: service_account
-  key_file: GOOGLE_SERVICE_ACCOUNT_FILE
-  token_url: https://oauth2.googleapis.com/token
-  scopes: [https://www.googleapis.com/auth/webmasters.readonly]
-  token_env: GSC_TOKEN
+  # One click: kiqr.cloud holds the Google app, the browser comes back through its relay.
+  - label: Connect with Google
+    flow: cloud
+    provider: google
+    scopes: [https://www.googleapis.com/auth/webmasters.readonly]
+    token_env: GSC_TOKEN
+    refresh_env: GSC_REFRESH_TOKEN
+  # Or a service account: KIQR signs a JWT with the key file and exchanges it
+  # for a token at Google, offered to the requests as ${GSC_TOKEN} (never stored).
+  - flow: service_account
+    key_file: GOOGLE_SERVICE_ACCOUNT_FILE
+    token_url: https://oauth2.googleapis.com/token
+    scopes: [https://www.googleapis.com/auth/webmasters.readonly]
+    token_env: GSC_TOKEN
 sources:
   search:
     requests:
