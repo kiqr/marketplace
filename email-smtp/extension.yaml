@@ -2,7 +2,7 @@
 # or any mail host. Values live in .env; the daemon sends.
 id: kiqr-smtp
 name: Send email from your mail account
-version: 0.2.4
+version: 0.2.5
 summary: "Email over SMTP: Gmail with an app password, Fastmail, Outlook or any mail host. Each channel has its own account, or shares one. Every send asks you first."
 categories: [email, publishing]
 avatar: avatar.svg
@@ -33,3 +33,8 @@ channels:
     destination:
       to: { type: string, label: "To", placeholder: "name@company.com, other@company.com" }
       subject: { type: string, label: "Subject", placeholder: "The article's title", optional: true }
+
+# When KIQR suggests this to a new project: the goals it serves, and text in a site's HTML that shows the business already uses it.
+fits:
+  goals: [repeat, launch]
+  html: []

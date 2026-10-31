@@ -5,7 +5,7 @@
 # position per day, plus the top queries and pages.
 id: search-console
 name: Read Google Search Console
-version: 0.3.0
+version: 0.3.1
 summary: "Clicks, impressions, click-through rate and average position per day, with the top queries and pages, once a day into Performance. Connect with Google in one click, or use a service account."
 categories: [analytics, seo]
 avatar: avatar.svg
@@ -83,3 +83,8 @@ sources:
         dims: { page: /keys/0 }
         metrics: { clicks: /clicks, impressions: /impressions, average_position: /position }
         totals: []
+
+# When KIQR suggests this to a new project: the goals it serves, and text in a site's HTML that shows the business already uses it.
+fits:
+  goals: [customers]
+  html: ["google-site-verification"]

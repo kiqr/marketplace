@@ -2,7 +2,7 @@
 # application password. Each channel is one site, with its own account.
 id: wordpress
 name: Publish articles to WordPress
-version: 0.3.4
+version: 0.3.5
 summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Add a channel per site; each signs in with one button. Every publish asks you first."
 categories: [publishing]
 avatar: avatar.svg
@@ -59,3 +59,8 @@ channels:
     publish: publish_article
     # Draft or live is chosen per publish (the tool's `status`), not per site.
     destination: {}
+
+# When KIQR suggests this to a new project: the goals it serves, and text in a site's HTML that shows the business already uses it.
+fits:
+  goals: [customers]
+  html: ["/wp-content/", "/wp-includes/"]

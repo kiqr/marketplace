@@ -2,7 +2,7 @@
 # page views per day through the Stats API.
 id: plausible
 name: Read Plausible Analytics
-version: 0.2.1
+version: 0.2.2
 summary: "Visitors, visits and page views per day from Plausible, hosted or self-hosted, once a day into Performance."
 categories: [analytics]
 avatar: avatar.svg
@@ -26,3 +26,8 @@ sources:
         rows: /results
         date: /date
         metrics: { sessions: /visits, users: /visitors, pageviews: /pageviews }
+
+# When KIQR suggests this to a new project: the goals it serves, and text in a site's HTML that shows the business already uses it.
+fits:
+  goals: []
+  html: ["plausible.io/js/"]
