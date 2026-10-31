@@ -1,15 +1,20 @@
-# GitHub through its REST and GraphQL APIs, for a product whose repository
-# is part of its marketing: how the repository does (stars, traffic, where
-# visitors come from), what people say in issues and discussions here and
-# elsewhere, and the replies and changes Seemo proposes. Connect with GitHub
-# in one click (kiqr.cloud holds KIQR's GitHub app; no token is kept there),
-# or paste a personal access token. Reading runs at once; anything that
-# writes (a comment, the topics, the About line, a draft release) asks first.
+# GitHub through its REST and GraphQL APIs: the repository's issues and pull
+# requests, what it shipped and what happens in it, how it does (stars,
+# traffic, where visitors come from), what people say about the product
+# elsewhere on GitHub, and articles published to a static site as pull
+# requests. An account is one repository: a channel to publish to, a source
+# KIQR learns the product from, or both. Add one per repository. Connect with
+# GitHub in one click through KIQR's GitHub app (kiqr.cloud holds it; no
+# token is kept there; private repositories work once the app is installed on
+# them), or paste a fine-grained token. Reading runs at once; anything that
+# writes (a comment, a review, an issue, a pull request, the topics, the About
+# line, a draft release) asks first. Nothing here merges or pushes to a
+# branch people build from.
 id: github
 name: Work on GitHub
-version: 0.1.0
-summary: "Your repository's stars, traffic and referrers, what people say in issues and discussions, and replies and repository changes Seemo proposes for your yes. Connect with GitHub in one click, or paste a token."
-categories: [community, analytics]
+version: 0.2.0
+summary: "Seemo learns your product from its repository (README, docs, releases), reads and answers issues and pull requests, follows what ships, and publishes articles to a static site as pull requests you merge. Add a repository as a source, a channel, or both; connect with GitHub in one click. Everything that writes asks you first."
+categories: [publishing, community, analytics]
 avatar: avatar.svg
 icon: github
 transport: http
@@ -18,13 +23,13 @@ hosts: [api.github.com]
 auth:
   - env: GITHUB_REPO
     label: Repository
-    help: "The repository this account works on, as owner/name: pick it once connected"
+    help: "The repository this channel works on, as owner/name: pick it once connected. Not listed? Install KIQR's GitHub app on it (github.com → Settings → Applications) and connect again"
     placeholder: "owner/name"
     choices:
       request:
         method: GET
         url: "https://api.github.com/user/repos"
-        query: { per_page: "100", sort: pushed, visibility: public }
+        query: { per_page: "100", sort: pushed }
         headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }
         timeout_s: 20
       list: /*
@@ -34,13 +39,17 @@ auth:
     label: GitHub sign-in or token
     optional: true
     typed: true
-    help: "Kept by Connect with GitHub. Or paste a token instead: https://github.com/settings/personal-access-tokens (read access to the repository; write to issues and administration for comments, topics and releases)"
+    help: "Kept by Connect with GitHub. Or paste a fine-grained token for this one repository instead: https://github.com/settings/personal-access-tokens (Contents, Pull requests and Issues read and write; Administration for traffic, topics and the About line)"
+  - env: GITHUB_REFRESH_TOKEN
+    label: GitHub sign-in renewal
+    optional: true
 connect:
   - label: Connect with GitHub
     flow: cloud
     provider: github
     scopes: [public_repo, read:user, read:org]
     token_env: GITHUB_TOKEN
+    refresh_env: GITHUB_REFRESH_TOKEN
 tools:
   # ------------------------------------------------------------ the repository
   - name: gh_repo
@@ -49,8 +58,8 @@ tools:
     request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_list_repos
     label: Listing GitHub repositories
-    description: "The public repositories this sign-in can see, most recently pushed first, with their stars."
-    request: { method: GET, url: "https://api.github.com/user/repos", query: { per_page: "100", sort: pushed, visibility: public }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+    description: "The repositories this sign-in can see (with the GitHub app: those it is installed on), most recently pushed first, with their stars."
+    request: { method: GET, url: "https://api.github.com/user/repos", query: { per_page: "100", sort: pushed }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_releases
     label: Reading the releases
     description: "The latest releases with their notes: what shipped and when (material for posts and changelogs)."
@@ -124,6 +133,58 @@ tools:
     label: Reading the GitHub account
     description: "Who this sign-in is: login, name, profile, followers, and the organisations it belongs to."
     request: { method: GET, url: "https://api.github.com/user", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  # ------------------------------------------------------------ pull requests
+  - name: gh_pulls
+    label: Reading the pull requests
+    description: "Pull requests of the repository (or `repo`), most recently updated first: title, author, branch, draft or not, labels."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, state: { type: string, enum: [open, closed, all] }, limit: { type: integer } } }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls", query: { state: "{{state|open}}", sort: updated, direction: desc, per_page: "{{limit|30}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_pull
+    label: Reading a pull request
+    description: "One pull request: title, description, branches, whether it is merged or mergeable, additions and deletions, reviewers."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls/{{number}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_pull_files
+    label: Reading a pull request's changes
+    description: "The files a pull request changes, each with its patch: what it actually does, before reviewing or describing it."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls/{{number}}/files", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 30 }
+  - name: gh_pull_reviews
+    label: Reading a pull request's reviews
+    description: "The reviews of a pull request: who approved, who asked for changes, and what they said."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls/{{number}}/reviews", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  # ------------------------------------------------------ code and what shipped
+  - name: gh_branches
+    label: Reading the branches
+    description: "The repository's branches and the commit each points at."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" } } }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/branches", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_compare
+    label: Comparing two versions
+    description: "What changed between two tags, branches or commits (`base`...`head`): the commits in between and the files they touched. What shipped since the last release, for notes and posts."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, base: { type: string, description: "e.g. v1.2.0" }, head: { type: string, description: "e.g. main or v1.3.0" } }, required: [base, head] }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/compare/{{base}}...{{head}}", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 30 }
+  - name: gh_tree
+    label: Listing a folder in the repository
+    description: "The files and folders at `path` (the root when left out) on a branch: where a site keeps its posts and images."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, path: { type: string }, branch: { type: string, description: "The default branch when left out" } } }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/contents/{{path}}", query: { ref: "{{branch}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_file
+    label: Reading a file in the repository
+    description: "One file's text (a post, the README, a config): to match a site's frontmatter and style, or to change a file with `gh_open_pr`."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, path: { type: string }, branch: { type: string, description: "The default branch when left out" } }, required: [path] }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/contents/{{path}}", query: { ref: "{{branch}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github.raw, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_readme
+    label: Reading the README
+    description: "The repository's README, as text: what the product is and how people start with it."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" } } }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/readme", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github.raw, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+  - name: gh_events
+    label: Reading what happened in the repository
+    description: "The repository's latest activity, newest first: pushes with their commits, pull requests opened and merged, issues, comments, releases, stars. Read it since the last time to follow the repository."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, limit: { type: integer, description: "Default 30, at most 100" } } }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/events", query: { per_page: "{{limit|30}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   # ------------------------------------------------- writing: each asks first
   - name: gh_comment
     label: Replying on GitHub
@@ -162,3 +223,145 @@ tools:
     input: { type: object, properties: { repo: { type: string, description: "owner/name" }, title: { type: string }, body: { type: string } }, required: [repo, title, body] }
     request: { method: POST, url: "https://api.github.com/repos/{{repo}}/issues", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { title: "{{title}}", body: "{{body}}" }, timeout_s: 30 }
     result: { text: /html_url }
+  - name: gh_create_issue
+    label: Opening an issue in the repository
+    description: "Open an issue in this account's repository: a bug a user reported elsewhere, a task, a question to track. Asks first; one per title."
+    role: manage
+    target: "${GITHUB_REPO}: {{title}}"
+    input: { type: object, properties: { title: { type: string }, body: { type: string, description: "Markdown" }, labels: { type: array, items: { type: string } } }, required: [title, body] }
+    request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/issues", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { title: "{{title}}", body: "{{body}}", labels: "{{labels}}" }, timeout_s: 30 }
+    result: { text: /html_url }
+  - name: gh_update_issue
+    label: Updating an issue
+    description: "Change an issue or pull request in this account's repository: its labels (replaced), assignees (replaced), or close or reopen it (`state`). Asks first."
+    role: manage
+    target: "${GITHUB_REPO}#{{number}} {{state}} {{labels}} {{assignees}}"
+    input: { type: object, properties: { number: { type: integer }, state: { type: string, enum: [open, closed] }, state_reason: { type: string, enum: [completed, not_planned] }, labels: { type: array, items: { type: string } }, assignees: { type: array, items: { type: string } } }, required: [number] }
+    request: { method: PATCH, url: "https://api.github.com/repos/${GITHUB_REPO}/issues/{{number}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { state: "{{state}}", state_reason: "{{state_reason}}", labels: "{{labels}}", assignees: "{{assignees}}" }, timeout_s: 30 }
+    result: { text: /html_url }
+  - name: gh_review_pr
+    label: Reviewing a pull request
+    description: "Review a pull request in this account's repository: a comment (default), or approve (only when the user asked). Never asks for changes on someone's behalf. Asks first; one review per pull request."
+    role: reply
+    target: "${GITHUB_REPO}#{{number}} review"
+    input: { type: object, properties: { number: { type: integer }, body: { type: string, description: "Markdown: what was checked and what was found" }, event: { type: string, enum: [COMMENT, APPROVE] } }, required: [number, body] }
+    request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/pulls/{{number}}/reviews", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { body: "{{body}}", event: "{{event|COMMENT}}" }, timeout_s: 30 }
+    result: { text: /html_url }
+  # ------------------------------------------- changes go in as pull requests
+  - name: gh_open_pr
+    label: Proposing a change as a pull request
+    description: "Write one file (new or replaced: read it first with `gh_file`) on a new branch of this account's repository and open a pull request for it. For a page, the changelog, a README section, or a post in the site's own format. Nothing is merged: a maintainer merges. Asks first."
+    role: manage
+    target: "${GITHUB_REPO} {{branch}}"
+    input:
+      type: object
+      properties:
+        path: { type: string, description: "The file, from the repository root, e.g. CHANGELOG.md or src/content/blog/launch.md" }
+        content: { type: string, description: "The whole file as it should be" }
+        title: { type: string, description: "The pull request's title" }
+        body: { type: string, description: "Markdown: what changes and why" }
+        branch: { type: string, description: "A new branch, e.g. kiqr/changelog-1-3" }
+        base: { type: string, description: "The branch to merge into; the default branch when left out" }
+        draft: { type: boolean }
+      required: [path, content, title, branch]
+    steps:
+      - name: info
+        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        save: { branch: /default_branch }
+      - name: base_ref
+        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/git/ref/heads/{{base|{{info.branch}}}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        save: { sha: /object/sha }
+      - name: base_commit
+        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/git/commits/{{base_ref.sha}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        save: { tree: /tree/sha }
+      - name: tree
+        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/git/trees", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { base_tree: "{{base_commit.tree}}", tree: [{ path: "{{path}}", mode: "100644", type: blob, content: "{{content}}" }] }, timeout_s: 30 }
+        save: { sha: /sha }
+      - name: change
+        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/git/commits", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { message: "{{title}}", tree: "{{tree.sha}}", parents: ["{{base_ref.sha}}"] }, timeout_s: 30 }
+        save: { sha: /sha }
+      - name: ref
+        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/git/refs", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { ref: "refs/heads/{{branch}}", sha: "{{change.sha}}" }, timeout_s: 30 }
+      - name: pr
+        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/pulls", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { title: "{{title}}", head: "{{branch}}", base: "{{base|{{info.branch}}}}", body: "{{body|Proposed by Seemo from KIQR.}}", draft: "{{draft}}" }, timeout_s: 30 }
+        save: { url: /html_url }
+    result: { text: "{{pr.url}}" }
+  # ------------------------------------- publishing: an article as a pull request
+  - name: gh_publish_pr
+    label: Publishing as a pull request
+    description: "Publish an article to a static site: `<folder>/<slug>/index.md` with frontmatter (title, date, description, tags, image) and the article's images beside it, on a new branch, with a pull request to merge it. The site goes live when a maintainer merges."
+    role: publish
+    target: "{{asset.type}}/{{asset.id}}"
+    input:
+      type: object
+      properties:
+        title: { type: string }
+        text: { type: string, description: "Markdown" }
+        draft: { type: boolean, description: "Open the pull request as a draft" }
+      required: [title, text]
+    steps:
+      - name: info
+        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        save: { branch: /default_branch }
+      - name: base_ref
+        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/git/ref/heads/{{base_branch|{{info.branch}}}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        save: { sha: /object/sha }
+      - name: base_commit
+        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/git/commits/{{base_ref.sha}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        save: { tree: /tree/sha }
+      - name: tree
+        request:
+          method: POST
+          url: "https://api.github.com/repos/${GITHUB_REPO}/git/trees"
+          headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }
+          json:
+            base_tree: "{{base_commit.tree}}"
+            tree:
+              - path: "{{content_dir}}/{{asset.id}}/index.md"
+                mode: "100644"
+                type: blob
+                content: "---\ntitle: {{title|json}}\ndate: {{date}}\ndescription: {{summary|json}}\ntags: {{tags|json}}\nimage: {{image|json}}\n---\n\n{{text}}\n"
+          timeout_s: 30
+        save: { sha: /sha }
+      - name: change
+        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/git/commits", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { message: "Add {{title}}", tree: "{{tree.sha}}", parents: ["{{base_ref.sha}}"] }, timeout_s: 30 }
+        save: { sha: /sha }
+      - name: ref
+        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/git/refs", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { ref: "refs/heads/kiqr/{{date}}-{{asset.id}}", sha: "{{change.sha}}" }, timeout_s: 30 }
+      # The images beside the article, one commit each on the new branch.
+      - name: images
+        when: "{{files}}"
+        for_each: files
+        request: { method: PUT, url: "https://api.github.com/repos/${GITHUB_REPO}/contents/{{content_dir}}/{{asset.id}}/{{file.name}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { message: "Add {{file.name}}", content: "{{file.base64}}", branch: "kiqr/{{date}}-{{asset.id}}" }, timeout_s: 120 }
+      - name: pr
+        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/pulls", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { title: "{{title}}", head: "kiqr/{{date}}-{{asset.id}}", base: "{{base_branch|{{info.branch}}}}", body: "{{summary}}\n\nPublished by Seemo from KIQR. Merge to put it on the site.", draft: "{{draft}}" }, timeout_s: 30 }
+        save: { url: /html_url }
+    result: { text: "{{pr.url}}" }
+# A repository is also a source: with learning on, KIQR reads what the code
+# says the product is (the About line and topics, the README, the docs folder,
+# the changelog and the latest releases) into the business profile, beside
+# the website, and again every week. Reading only.
+learn:
+  label: "Learn the product from its README, docs and releases"
+  documents:
+    - { tool: gh_repo, title: "About ${GITHUB_REPO}", url: "https://github.com/${GITHUB_REPO}" }
+    - { tool: gh_readme, title: README, url: "https://github.com/${GITHUB_REPO}#readme" }
+    - tool: gh_tree
+      args: { path: docs }
+      each: { where: { type: file }, only: [.md, .mdx, .markdown], value: /path, tool: gh_file, arg: path, max: 20 }
+      title: "{{value}}"
+      url: "https://github.com/${GITHUB_REPO}/blob/HEAD/{{value}}"
+    - { tool: gh_file, args: { path: CHANGELOG.md }, title: Changelog, url: "https://github.com/${GITHUB_REPO}/blob/HEAD/CHANGELOG.md" }
+    - { tool: gh_releases, args: { limit: 10 }, title: Releases, url: "https://github.com/${GITHUB_REPO}/releases" }
+channels:
+  # A channel is one repository (the account's GITHUB_REPO): an article
+  # published to it is a pull request against the site's source.
+  - kind: github-repo
+    label: GitHub repository
+    name: GitHub
+    icon: github
+    publish: gh_publish_pr
+    does: [publish, read, reply, manage]
+    destination:
+      content_dir: { label: Folder for articles, placeholder: "content/blog", help: "Where the site keeps its posts, from the repository root. Each article becomes <folder>/<slug>/index.md with its images beside it" }
+      base_branch: { label: Branch, optional: true, placeholder: "main", help: "The branch the pull requests go into; the repository's default when empty" }
