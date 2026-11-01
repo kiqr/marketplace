@@ -7,53 +7,62 @@
 # landing pages and sources over the window.
 id: google-analytics
 name: Read Google Analytics
-version: 0.4.2
+version: 0.5.0
 summary: "Sessions, users, page views, key events, your top pages and where visits come from, once a day into Performance, and any report Seemo asks for. Connect with Google in one click, or use a service account."
 categories: [analytics]
 avatar: avatar.svg
 icon: chart
-service: { id: google-analytics, name: Google Analytics, icon: chart, group: numbers }
+# One Google account for the project: this and Search Console share it (the
+# same sign-in, the same tokens); the property is a place on the account.
+service: { id: google, name: Google, icon: globe, group: numbers }
 allow: { measure: on }
 transport: http
 homepage: https://developers.google.com/analytics/devguides/reporting/data/v1
 hosts: [analyticsdata.googleapis.com, analyticsadmin.googleapis.com, oauth2.googleapis.com]
 auth:
-  - env: GA4_PROPERTY_ID
-    label: GA4 property
-    help: "Pick it once the account is connected, or type the number under Admin → Property settings"
-    placeholder: "123456789"
-    # The properties the signed-in account can see.
-    choices:
-      request:
-        method: GET
-        url: "https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200"
-        headers: { Authorization: "Bearer ${GA4_TOKEN}" }
-        timeout_s: 20
-      list: /accountSummaries/*/propertySummaries/*
-      value: /property
-      label: /displayName
-      strip: "properties/"
-  # Kept by "Connect with Google"; never typed.
-  - { env: GA4_TOKEN, label: Google sign-in, optional: true }
+  # Kept by "Connect with Google"; never typed. Shared with Search Console.
+  - { env: GOOGLE_TOKEN, label: Google sign-in, optional: true }
   - env: GOOGLE_SERVICE_ACCOUNT_FILE
     label: Service account key file
     optional: true
     help: "Instead of connecting with Google: the path on this machine to the JSON key of a service account that is a Viewer on the property (Google Cloud → IAM → Service accounts → Keys)"
 connect:
   # One click: kiqr.cloud holds the Google app, the browser comes back through its relay.
+  # Both read-only scopes, so the one sign-in serves Search Console too.
   - label: Connect with Google
     flow: cloud
     provider: google
-    scopes: [https://www.googleapis.com/auth/analytics.readonly]
-    token_env: GA4_TOKEN
-    refresh_env: GA4_REFRESH_TOKEN
+    scopes: [https://www.googleapis.com/auth/analytics.readonly, https://www.googleapis.com/auth/webmasters.readonly]
+    token_env: GOOGLE_TOKEN
+    refresh_env: GOOGLE_REFRESH_TOKEN
   # Or a service account: KIQR signs a JWT with the key file and exchanges it
-  # for a token at Google, offered to the requests as ${GA4_TOKEN} (never stored).
+  # for a token at Google, offered to the requests as ${GOOGLE_TOKEN} (never stored).
   - flow: service_account
     key_file: GOOGLE_SERVICE_ACCOUNT_FILE
     token_url: https://oauth2.googleapis.com/token
-    scopes: [https://www.googleapis.com/auth/analytics.readonly]
-    token_env: GA4_TOKEN
+    scopes: [https://www.googleapis.com/auth/analytics.readonly, https://www.googleapis.com/auth/webmasters.readonly]
+    token_env: GOOGLE_TOKEN
+# The place this works on inside the Google account: one GA4 property, picked
+# from those the account can see. `{{property}}` in the calls below.
+places:
+  property:
+    label: GA4 property
+    help: "Pick it once the account is connected, or type the number under Admin → Property settings"
+    placeholder: "123456789"
+    choices:
+      request:
+        method: GET
+        url: "https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200"
+        headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
+        timeout_s: 20
+      list: /accountSummaries/*/propertySummaries/*
+      value: /property
+      label: /displayName
+      strip: "properties/"
+# Accounts from before: the property moves into a place, the tokens take the shared names.
+moved:
+  keys: { GA4_TOKEN: GOOGLE_TOKEN, GA4_REFRESH_TOKEN: GOOGLE_REFRESH_TOKEN }
+  places: { GA4_PROPERTY_ID: property }
 # Seemo's own questions, beside the daily numbers: reports it composes, live
 # visitors, and how the property is set up. All read-only, through the same
 # account and property as the daily pull.
@@ -76,8 +85,8 @@ tools:
       required: [metrics]
     request:
       method: POST
-      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}:runReport"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       json: { dateRanges: [{ startDate: "{{start_date|28daysAgo}}", endDate: "{{end_date|yesterday}}" }], dimensions: "{{dimensions}}", metrics: "{{metrics}}", dimensionFilter: "{{dimension_filter}}", metricFilter: "{{metric_filter}}", orderBys: "{{order_bys}}", limit: "{{limit|100}}", offset: "{{offset}}" }
       timeout_s: 60
   - name: ga_pivot_report
@@ -95,8 +104,8 @@ tools:
       required: [dimensions, metrics, pivots]
     request:
       method: POST
-      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runPivotReport"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}:runPivotReport"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       json: { dateRanges: [{ startDate: "{{start_date|28daysAgo}}", endDate: "{{end_date|yesterday}}" }], dimensions: "{{dimensions}}", metrics: "{{metrics}}", pivots: "{{pivots}}", dimensionFilter: "{{dimension_filter}}" }
       timeout_s: 60
   - name: ga_realtime_report
@@ -112,8 +121,8 @@ tools:
       required: [metrics]
     request:
       method: POST
-      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runRealtimeReport"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}:runRealtimeReport"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       json: { dimensions: "{{dimensions}}", metrics: "{{metrics}}", minuteRanges: [{ startMinutesAgo: "{{minutes_ago|29}}", endMinutesAgo: 0 }], limit: "{{limit|50}}" }
       timeout_s: 30
   - name: ga_check_compatibility
@@ -126,8 +135,8 @@ tools:
         metrics: { type: array, items: { type: object, properties: { name: { type: string } }, required: [name] } }
     request:
       method: POST
-      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:checkCompatibility"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}:checkCompatibility"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       json: { dimensions: "{{dimensions}}", metrics: "{{metrics}}" }
       timeout_s: 30
   - name: ga_list_fields
@@ -135,8 +144,8 @@ tools:
     description: "Every dimension and metric this property can report on, with its API name, description and category, custom dimensions and metrics included."
     request:
       method: GET
-      url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/metadata"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}/metadata"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 30
   - name: ga_list_properties
     label: Listing Google Analytics properties
@@ -144,63 +153,63 @@ tools:
     request:
       method: GET
       url: "https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 20
   - name: ga_property
     label: Reading the property's settings
     description: "The property's name, time zone, currency, industry and when it was created."
     request:
       method: GET
-      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/{{property}}"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 20
   - name: ga_data_retention
     label: Reading how long data is kept
     description: "How long the property keeps event and user data, which limits how far back explorations go."
     request:
       method: GET
-      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/dataRetentionSettings"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/{{property}}/dataRetentionSettings"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 20
   - name: ga_data_streams
     label: Reading the property's data streams
     description: "The web sites and apps that send data to the property, with their measurement ids and URLs."
     request:
       method: GET
-      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/dataStreams?pageSize=200"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/{{property}}/dataStreams?pageSize=200"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 20
   - name: ga_key_events
     label: Reading the key events
     description: "The events the property counts as key events (conversions), and how each is counted."
     request:
       method: GET
-      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/keyEvents?pageSize=200"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/{{property}}/keyEvents?pageSize=200"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 20
   - name: ga_custom_dimensions
     label: Reading the custom dimensions
     description: "The property's custom dimensions: their names, scope (event, user, item) and the parameter each reads."
     request:
       method: GET
-      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/customDimensions?pageSize=200"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/{{property}}/customDimensions?pageSize=200"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 20
   - name: ga_custom_metrics
     label: Reading the custom metrics
     description: "The property's custom metrics: their names, units and the parameter each reads."
     request:
       method: GET
-      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/customMetrics?pageSize=200"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/{{property}}/customMetrics?pageSize=200"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 20
   - name: ga_ads_links
     label: Reading the Google Ads links
     description: "The Google Ads accounts linked to the property, so ad clicks and costs can show in its reports."
     request:
       method: GET
-      url: "https://analyticsadmin.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}/googleAdsLinks?pageSize=200"
-      headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+      url: "https://analyticsadmin.googleapis.com/v1beta/properties/{{property}}/googleAdsLinks?pageSize=200"
+      headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
       timeout_s: 20
 sources:
   traffic:
@@ -208,8 +217,8 @@ sources:
       # Per day and channel: the day's totals and the channel breakdown.
       - request:
           method: POST
-          url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
-          headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+          url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}:runReport"
+          headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
           json:
             dateRanges: [{ startDate: "{{from}}", endDate: "{{to}}" }]
             dimensions: [{ name: date }, { name: sessionDefaultChannelGroup }]
@@ -225,8 +234,8 @@ sources:
       # The 50 landing pages with the most sessions over the window, with their key events.
       - request:
           method: POST
-          url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
-          headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+          url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}:runReport"
+          headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
           json:
             dateRanges: [{ startDate: "{{from}}", endDate: "{{to}}" }]
             dimensions: [{ name: landingPage }]
@@ -243,8 +252,8 @@ sources:
       # Where visits come from (source / medium, so KIQR's own UTM links show), top 25 over the window.
       - request:
           method: POST
-          url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
-          headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+          url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}:runReport"
+          headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
           json:
             dateRanges: [{ startDate: "{{from}}", endDate: "{{to}}" }]
             dimensions: [{ name: sessionSourceMedium }]
@@ -266,8 +275,8 @@ sources:
     requests:
       - request:
           method: POST
-          url: "https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport"
-          headers: { Authorization: "Bearer ${GA4_TOKEN}" }
+          url: "https://analyticsdata.googleapis.com/v1beta/properties/{{property}}:runReport"
+          headers: { Authorization: "Bearer ${GOOGLE_TOKEN}" }
           json:
             dateRanges: [{ startDate: "{{from}}", endDate: "{{to}}" }]
             dimensions: [{ name: date }, { name: eventName }]
