@@ -13,7 +13,7 @@ icon: search
 # Shares the project's Google account with Google Analytics (the same sign-in,
 # the same tokens); the Search Console property is a place on the account.
 service: { id: google, name: Google, icon: globe, group: numbers }
-allow: { measure: on }
+allow: { measure: "on" }
 transport: http
 homepage: https://developers.google.com/webmaster-tools/v1/searchanalytics/query
 hosts: [searchconsole.googleapis.com, oauth2.googleapis.com]

@@ -8,7 +8,7 @@ categories: [analytics]
 avatar: avatar.svg
 icon: chart
 service: { id: plausible, name: Plausible, icon: chart, group: numbers }
-allow: { measure: on }
+allow: { measure: "on" }
 transport: http
 homepage: https://plausible.io/docs/stats-api
 hosts: [plausible.io, "${PLAUSIBLE_HOST}"]

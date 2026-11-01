@@ -1,0 +1,103 @@
+# Reddit through the browser KIQR hosts, signed in as the user: a subreddit's
+# new posts, a search, a thread; a comment and a post, each behind a card. One
+# account is one Reddit login; the subreddits it posts to are places on it.
+# Uses old.reddit.com, whose markup is plain and stable.
+id: reddit-browser
+name: Read, reply and post on Reddit
+version: 0.1.0
+summary: "Your Reddit account in a browser of Seemo's own: it reads the subreddits you pick, searches, comments and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
+categories: [browser, community, publishing]
+icon: messages-square
+transport: mcp
+program: browser
+service: { id: reddit, name: Reddit, icon: messages-square, group: social, profile_hosts: [reddit.com] }
+allow: { read: "on", reply: ask, publish: ask }
+exclusive: true
+daily_cap: 10
+hosts: [reddit.com, old.reddit.com, www.reddit.com]
+url_args: [url]
+expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_screenshot]
+session:
+  check:
+    - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/", wait_until: domcontentloaded } }
+    - { name: look, call: browser_read_html, args: { mode: form } }
+  signed_out_when: ["login-form", 'name="passwd"']
+  login:
+    - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/login", wait_until: domcontentloaded } }
+    - { name: user, call: browser_type, args: { selector: "#login-username, input[name='username']", text: "{{credential.username}}" } }
+    - { name: pass, call: browser_type, args: { selector: "#login-password, input[name='password']", text: "{{credential.password}}" } }
+    - { name: go, call: browser_press_key, args: { key: Enter } }
+    - { name: otp, call: browser_type, args: { selector: "input[name='otp'], #login-otp", text: "{{credential.otp}}" }, when: "{{credential.otp}}" }
+    - { name: otp_go, call: browser_press_key, args: { key: Enter }, when: "{{credential.otp}}" }
+  blocked_when: ["captcha", "verify you are human", "two-factor", "suspicious"]
+  every: 6h
+live_view:
+  frame: { name: frame, call: browser_watch }
+  click: { name: click, call: browser_click_at, args: { x: "{{px}}", y: "{{py}}" } }
+  key: { name: key, call: browser_press_key, args: { key: "{{key}}" } }
+  type: { name: type, call: browser_evaluate, args: { expression: "document.execCommand('insertText', false, {{text|json}})" } }
+  navigate: { name: navigate, call: browser_navigate, args: { url: "{{url}}", wait_until: domcontentloaded } }
+tools:
+  - name: read_feed
+    label: Reading a subreddit
+    description: The newest posts of a subreddit as text with links; the account's default place when none is named.
+    input: { type: object, properties: { subreddit: { type: string, description: "Without r/; the place's when left out" } } }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/r/{{subreddit}}/new/", wait_until: domcontentloaded } }
+      - { name: text, call: browser_read_text, args: { selector: "#siteTable" } }
+    result: { text: /text }
+  - name: search
+    label: Searching Reddit
+    description: Posts matching a query, newest first, as text with links.
+    input: { type: object, properties: { query: { type: string } }, required: [query] }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/search?q={{query|urlencode}}&sort=new", wait_until: domcontentloaded } }
+      - { name: text, call: browser_read_text, args: { selector: "#siteTable, .search-result-listing" } }
+    result: { text: /text }
+  - name: read_thread
+    label: Reading a post and its comments
+    description: One post with its comments, as text.
+    input: { type: object, properties: { url: { type: string } }, required: [url] }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "{{url}}", wait_until: domcontentloaded } }
+      - { name: text, call: browser_read_text, args: { selector: ".content" } }
+    result: { text: /text }
+  - name: reply
+    label: Commenting on Reddit
+    description: Comment on a post as the connected account. The user sees the comment on a card first.
+    role: reply
+    target: "{{post_url}}"
+    input: { type: object, properties: { post_url: { type: string }, text: { type: string } }, required: [post_url, text] }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "{{post_url}}", wait_until: domcontentloaded } }
+      - { name: type, call: browser_type, args: { selector: ".commentarea textarea[name='text']", text: "{{text}}" } }
+      - { name: send, call: browser_click, args: { selector: ".commentarea .usertext-buttons button[type='submit']" } }
+      - { name: shot, call: browser_take_screenshot }
+    result: { text: "Commented on {{post_url}}" }
+  - name: post
+    label: Posting on Reddit
+    description: Publish a text post to the subreddit (the place) as the connected account.
+    role: publish
+    input: { type: object, properties: { title: { type: string }, text: { type: string }, subreddit: { type: string } }, required: [title, text] }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/r/{{subreddit}}/submit?selftext=true", wait_until: domcontentloaded } }
+      - { name: title, call: browser_type, args: { selector: "textarea[name='title']", text: "{{title}}" } }
+      - { name: body, call: browser_type, args: { selector: "textarea[name='text']", text: "{{text}}" } }
+      - { name: send, call: browser_click, args: { selector: "button[name='submit']" } }
+      - { name: shot, call: browser_take_screenshot }
+    result: { text: "Posted to r/{{subreddit}}" }
+channels:
+  - kind: reddit
+    label: Subreddit
+    name: Reddit
+    icon: messages-square
+    publish: post
+    does: [publish, read, reply]
+    profile_hosts: [reddit.com]
+    text_limit: 40000
+    preview: feed
+    writing: "A plain title that says what it is, a body that gives before it asks; no marketing voice, Reddit smells it."
+    place:
+      subreddit: { label: Subreddit, placeholder: "selfhosted", help: "Without r/. Add one place per subreddit you post to." }
+fits:
+  networks: [reddit]

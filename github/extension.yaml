@@ -19,7 +19,7 @@ categories: [publishing, community, analytics]
 avatar: avatar.svg
 icon: github
 service: { id: github, name: GitHub, icon: github, group: website, profile_hosts: [github.com] }
-allow: { publish: ask, reply: ask, manage: ask, learn: on }
+allow: { publish: ask, reply: ask, manage: ask, learn: "on" }
 transport: http
 homepage: https://docs.github.com/en/rest
 hosts: [api.github.com]

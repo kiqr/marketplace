@@ -15,7 +15,7 @@ icon: chart
 # One Google account for the project: this and Search Console share it (the
 # same sign-in, the same tokens); the property is a place on the account.
 service: { id: google, name: Google, icon: globe, group: numbers }
-allow: { measure: on }
+allow: { measure: "on" }
 transport: http
 homepage: https://developers.google.com/analytics/devguides/reporting/data/v1
 hosts: [analyticsdata.googleapis.com, analyticsadmin.googleapis.com, oauth2.googleapis.com]

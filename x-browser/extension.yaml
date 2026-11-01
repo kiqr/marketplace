@@ -1,0 +1,105 @@
+# X (Twitter) through the browser KIQR hosts, signed in as the user: the home
+# timeline, a search, a thread; a reply and a post, each behind a card. One
+# account is one X login; its profile lives with the account. The steps name
+# X's own markup (data-testid attributes), so when X changes, this file does.
+id: x-browser
+name: Read, reply and post on X
+version: 0.1.0
+summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
+categories: [browser, community, publishing]
+icon: message-circle
+transport: mcp
+program: browser
+service: { id: x, name: X, icon: message-circle, group: social, profile_hosts: [x.com, twitter.com] }
+allow: { read: "on", reply: ask, publish: ask }
+exclusive: true
+daily_cap: 15
+hosts: [x.com, twitter.com]
+url_args: [url]
+expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_screenshot]
+session:
+  check:
+    - { name: open, call: browser_navigate, args: { url: "https://x.com/home", wait_until: domcontentloaded } }
+    - { name: look, call: browser_read_html, args: { mode: form } }
+  signed_in_when: "SideNav_AccountSwitcher_Button"
+  login:
+    - { name: open, call: browser_navigate, args: { url: "https://x.com/i/flow/login", wait_until: domcontentloaded } }
+    - { name: user, call: browser_type, args: { selector: "input[autocomplete='username']", text: "{{credential.username}}" } }
+    - { name: next, call: browser_press_key, args: { key: Enter } }
+    - { name: pass, call: browser_type, args: { selector: "input[name='password']", text: "{{credential.password}}" } }
+    - { name: go, call: browser_press_key, args: { key: Enter } }
+    - { name: otp, call: browser_type, args: { selector: "input[data-testid='ocfEnterTextTextInput']", text: "{{credential.otp}}" }, when: "{{credential.otp}}" }
+    - { name: otp_go, call: browser_press_key, args: { key: Enter }, when: "{{credential.otp}}" }
+  blocked_when: ["arkose", "verify your identity", "unusual login activity", "confirm your phone", "suspicious"]
+  every: 6h
+live_view:
+  frame: { name: frame, call: browser_watch }
+  click: { name: click, call: browser_click_at, args: { x: "{{px}}", y: "{{py}}" } }
+  key: { name: key, call: browser_press_key, args: { key: "{{key}}" } }
+  type: { name: type, call: browser_evaluate, args: { expression: "document.execCommand('insertText', false, {{text|json}})" } }
+  navigate: { name: navigate, call: browser_navigate, args: { url: "{{url}}", wait_until: domcontentloaded } }
+tools:
+  - name: read_feed
+    label: Reading the X timeline
+    description: The home timeline as text, newest first, with each post's link where the page shows it.
+    input: { type: object, properties: {} }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "https://x.com/home", wait_until: domcontentloaded } }
+      - { name: text, call: browser_read_text, args: { selector: "main" } }
+    result: { text: /text }
+  - name: search
+    label: Searching X
+    description: Latest posts for a query, as text with links.
+    input: { type: object, properties: { query: { type: string } }, required: [query] }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "https://x.com/search?q={{query|urlencode}}&f=live", wait_until: domcontentloaded } }
+      - { name: text, call: browser_read_text, args: { selector: "main" } }
+    result: { text: /text }
+  - name: read_thread
+    label: Reading a post and its replies
+    description: One post with its replies, as text.
+    input: { type: object, properties: { url: { type: string, description: "The post's link on x.com" } }, required: [url] }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "{{url}}", wait_until: domcontentloaded } }
+      - { name: text, call: browser_read_text, args: { selector: "main" } }
+    result: { text: /text }
+  - name: reply
+    label: Replying on X
+    description: Reply to a post as the connected account. The user sees the reply on a card first.
+    role: reply
+    target: "{{post_url}}"
+    input: { type: object, properties: { post_url: { type: string }, text: { type: string, description: "The reply, at most 280 characters" } }, required: [post_url, text] }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "{{post_url}}", wait_until: domcontentloaded } }
+      - { name: box, call: browser_click, args: { selector: "[data-testid='tweetTextarea_0']" } }
+      - { name: type, call: browser_type, args: { selector: "[data-testid='tweetTextarea_0']", text: "{{text}}" } }
+      - { name: send, call: browser_click, args: { selector: "[data-testid='tweetButtonInline']" } }
+      - { name: shot, call: browser_take_screenshot }
+    result: { text: "Replied on {{post_url}}" }
+  - name: post
+    label: Posting on X
+    description: Publish a post as the connected account, with the asset's first image when it has one.
+    role: publish
+    input: { type: object, properties: { text: { type: string }, image: { type: string } } }
+    steps:
+      - { name: open, call: browser_navigate, args: { url: "https://x.com/compose/post", wait_until: domcontentloaded } }
+      - { name: type, call: browser_type, args: { selector: "[data-testid='tweetTextarea_0']", text: "{{text}}" } }
+      - { name: image, call: browser_upload_files, args: { selector: "input[data-testid='fileInput']", paths: ["${KIQR_PROJECT_DIR}/assets/{{asset.type}}/{{asset.id}}/{{image}}"] }, when: "{{image}}" }
+      - { name: send, call: browser_click, args: { selector: "[data-testid='tweetButton']" } }
+      - { name: shot, call: browser_take_screenshot }
+    result: { text: "Posted on X" }
+channels:
+  - kind: x
+    label: X account
+    name: X
+    icon: message-circle
+    publish: post
+    does: [publish, read, reply]
+    profile_hosts: [x.com, twitter.com]
+    text_limit: 280
+    image: { width: 1200, height: 675 }
+    preview: feed
+    writing: "Up to 280 characters, one idea, no hashtag pile; a question or a line that invites a reply."
+    place: {}
+fits:
+  networks: [x, twitter]
