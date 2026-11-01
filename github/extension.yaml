@@ -13,7 +13,7 @@
 # branch people build from.
 id: github
 name: Work on GitHub
-version: 0.3.1
+version: 0.3.2
 summary: "Seemo learns your product from its repository (README, docs, releases), reads and answers issues and pull requests, follows what ships, and publishes to the site the repository builds, as pull requests in the site's own code that you merge. Connect a repository with GitHub in one click and say what Seemo may do there. Everything that writes asks you first until you say otherwise."
 categories: [publishing, community, analytics]
 avatar: avatar.svg
@@ -54,6 +54,8 @@ connect:
     scopes: [public_repo, read:user, read:org]
     token_env: GITHUB_TOKEN
     refresh_env: GITHUB_REFRESH_TOKEN
+    # A GitHub App sees only the repositories it is installed on, and its sign-in page never offers the installation.
+    grant: { label: Install KIQR on your repositories, url: "https://github.com/apps/kiqr/installations/new", help: "pick the account or organization, then the repositories" }
 tools:
   # ------------------------------------------------------------ the repository
   - name: gh_repo
