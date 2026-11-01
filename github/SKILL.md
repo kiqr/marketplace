@@ -43,7 +43,7 @@ Before every later publish, `read_instructions` that recipe, then check it still
 **Publish.** `publish_asset` with `options`:
 - `changes`: every file of the publish, whole, from the repository root (`mode` "100644", `type` "blob"): the new page in the site's own code, written from the asset (the text, not a summary of it), and each existing file that must change for it to appear, read first with `gh_file` and written back whole with only that change.
 - `image_dir`: where the asset's images go, when it has any; reference them in the page as the site does, by their attached names.
-Never publish straight to the default branch, never touch files the publish does not need, and never open a second pull request for the same asset; read `gh_pulls` first. For a change that is not an asset (a fix on an existing page, the changelog), use `gh_open_pr` with the same `changes`.
+Never publish straight to the default branch, never touch files the publish does not need, and never open a second pull request for the same asset; read `gh_pulls` first. If a write answers 403 "Resource not accessible by integration", the KIQR GitHub App may not write to this repository yet: tell the user to give the App **Contents** and **Pull requests** read and write under its settings on GitHub (Settings → Developer settings → GitHub Apps → KIQR → Permissions), accept the new permissions on the installation, and try again; nothing is wrong with the asset. For a change that is not an asset (a fix on an existing page, the changelog), use `gh_open_pr` with the same `changes`.
 
 ## Example
 User: "What happened in the repo this week?"
