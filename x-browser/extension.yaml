@@ -20,8 +20,9 @@ expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_scr
 session:
   check:
     - { name: open, call: browser_navigate, args: { url: "https://x.com/home", wait_until: domcontentloaded } }
-    - { name: look, call: browser_read_html, args: { mode: form } }
-  signed_in_when: "SideNav_AccountSwitcher_Button"
+    - { name: look, call: browser_snapshot }
+  # The account menu in the left rail shows only when signed in; a sign-in page shows the password field.
+  signed_in_when: "AccountSwitcher"
   login:
     - { name: open, call: browser_navigate, args: { url: "https://x.com/i/flow/login", wait_until: domcontentloaded } }
     - { name: user, call: browser_type, args: { selector: "input[autocomplete='username']", text: "{{credential.username}}" } }

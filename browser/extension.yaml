@@ -30,11 +30,17 @@ requires:
   - program: invisible-playwright-mcp
     version: "0.73.0"
     uv_tool: "invisible-playwright-mcp==0.73.0"
-  # Headless on Linux draws to a virtual display: Xvfb from the system's packages (shown as a command; KIQR never runs sudo).
+  # Headless on Linux draws to a virtual display. KIQR installs its own Xvfb, a
+  # relocatable bundle built from Debian's package (marketplace: programs/xvfb/build.sh,
+  # published on github.com/kiqr/programs), so no one has to install a system package;
+  # the system's package is the fallback, shown as a command (KIQR never runs sudo itself).
   - program: Xvfb
-    version: ""
-    check: [Xvfb, -help]
-    system: { apt: xvfb, dnf: xorg-x11-server-Xvfb, pacman: xorg-server-xvfb, zypper: xorg-x11-server-Xvfb }
+    version: "21.1.4"
+    check: [Xvfb, -version]
+    install:
+      - { os: linux, arch: x86_64, url: "https://github.com/kiqr/programs/releases/download/xvfb-21.1.4/xvfb-21.1.4-linux-x86_64.tar.gz", sha256: b1cd7e52119a763595cf68781c856ab5df834babe65ee8e01f619ded0f82af92, archive: tar.gz, unpack: true, bin: xvfb-21.1.4/bin/Xvfb }
+      - { os: linux, arch: aarch64, url: "https://github.com/kiqr/programs/releases/download/xvfb-21.1.4/xvfb-21.1.4-linux-aarch64.tar.gz", sha256: cf0a06e0dd8c99204986466a29dbd8ff54c1dc5f89fa24b73c5c29eb5450983a, archive: tar.gz, unpack: true, bin: xvfb-21.1.4/bin/Xvfb }
+    system: { apt: xvfb, dnf: xorg-x11-server-Xvfb, pacman: xorg-server-xvfb, zypper: xorg-x11-server-Xvfb, apk: xvfb }
 command: invisible-playwright-mcp
 args: []
 # The browser is opened once the program is up; the profile makes it the account's own.
@@ -57,9 +63,9 @@ hosts: ["${SITE_URL}"]
 session:
   check:
     - { name: open, call: browser_navigate, args: { url: "${SITE_URL}", wait_until: domcontentloaded } }
-    - { name: look, call: browser_read_html, args: { mode: form } }
+    - { name: look, call: browser_snapshot }
   # Generic: a password field on the start page means signed out; a person signs in once in the live view.
-  signed_out_when: ['type="password"']
+  signed_out_when: ['"type":"password"', '"type": "password"']
   login: []
   blocked_when: [captcha, "verify you are human", "unusual traffic"]
   every: 12h

@@ -20,8 +20,8 @@ expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_scr
 session:
   check:
     - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/", wait_until: domcontentloaded } }
-    - { name: look, call: browser_read_html, args: { mode: form } }
-  signed_out_when: ["login-form", 'name="passwd"']
+    - { name: look, call: browser_snapshot }
+  signed_out_when: ['"passwd"', '"type":"password"', '"type": "password"']
   login:
     - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/login", wait_until: domcontentloaded } }
     - { name: user, call: browser_type, args: { selector: "#login-username, input[name='username']", text: "{{credential.username}}" } }
