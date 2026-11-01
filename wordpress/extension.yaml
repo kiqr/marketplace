@@ -60,7 +60,6 @@ channels:
     # Draft or live is chosen per publish (the tool's `status`), not per site.
     destination: {}
 
-# When KIQR suggests this to a new project: the goals it serves, and text in a site's HTML that shows the business already uses it.
+# Suggested only to a site that runs on WordPress (it publishes there; it serves no goal on its own).
 fits:
-  goals: [customers]
   html: ["/wp-content/", "/wp-includes/"]
