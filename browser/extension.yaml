@@ -31,7 +31,7 @@ requires:
     version: "0.73.0"
     uv_tool: "invisible-playwright-mcp==0.73.0"
   # Headless on Linux draws to a virtual display. KIQR installs its own Xvfb, a
-  # relocatable bundle built from Debian's package (marketplace: programs/xvfb/build.sh,
+  # relocatable bundle built from Ubuntu 22.04's package (github.com/kiqr/programs, xvfb/build.sh,
   # published on github.com/kiqr/programs), so no one has to install a system package;
   # the system's package is the fallback, shown as a command (KIQR never runs sudo itself).
   - program: Xvfb
