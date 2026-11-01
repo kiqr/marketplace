@@ -2,8 +2,9 @@
 # requests, what it shipped and what happens in it, how it does (stars,
 # traffic, where visitors come from), what people say about the product
 # elsewhere on GitHub, and anything published to the site the repository
-# builds, as a pull request in the site's own format. An account is one repository: a channel to publish to, a source
-# KIQR learns the product from, or both. Add one per repository. Connect with
+# builds, as a pull request in the site's own format. An account is one
+# repository: Seemo learns the product from it, publishes to the site it
+# builds, or both, as its permissions say. Add one per repository. Connect with
 # GitHub in one click through KIQR's GitHub app (kiqr.cloud holds it; no
 # token is kept there; private repositories work once the app is installed on
 # them), or paste a fine-grained token. Reading runs at once; anything that
@@ -12,11 +13,13 @@
 # branch people build from.
 id: github
 name: Work on GitHub
-version: 0.3.0
-summary: "Seemo learns your product from its repository (README, docs, releases), reads and answers issues and pull requests, follows what ships, and publishes to the site the repository builds, as pull requests in the site's own code that you merge. Add a repository as a source, a channel, or both; connect with GitHub in one click. Everything that writes asks you first."
+version: 0.3.1
+summary: "Seemo learns your product from its repository (README, docs, releases), reads and answers issues and pull requests, follows what ships, and publishes to the site the repository builds, as pull requests in the site's own code that you merge. Connect a repository with GitHub in one click and say what Seemo may do there. Everything that writes asks you first until you say otherwise."
 categories: [publishing, community, analytics]
 avatar: avatar.svg
 icon: github
+service: { id: github, name: GitHub, icon: github, group: website, profile_hosts: [github.com] }
+allow: { publish: ask, reply: ask, manage: ask, learn: on }
 transport: http
 homepage: https://docs.github.com/en/rest
 hosts: [api.github.com]
@@ -379,5 +382,5 @@ channels:
     icon: github
     publish: gh_publish_pr
     does: [publish, read, reply, manage]
-    destination:
+    place:
       base_branch: { label: Branch, optional: true, placeholder: "main", help: "The branch the pull requests go into; the repository's default when empty" }
