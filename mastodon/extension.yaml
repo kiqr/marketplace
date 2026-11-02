@@ -1,0 +1,67 @@
+# Mastodon through its own API: the image goes into the server's media
+# library first, then the status names it. One account is one server (the
+# project's setting) and one access token from that server's Development
+# page (Preferences → Development → New application, scopes write:statuses
+# and write:media), kept in the Vault for the server's domain.
+id: mastodon
+name: Post on Mastodon
+version: 0.1.0
+summary: "Posts from the library go out on your Mastodon account, with their image, on any server. Give it an access token from your server's Development page. Every post asks you first until you say otherwise."
+categories: [social, publishing]
+avatar: avatar.svg
+icon: megaphone
+transport: http
+homepage: https://docs.joinmastodon.org/methods/statuses/
+settings:
+  mastodon_host: { label: Your server, help: "The server your account lives on", placeholder: "https://mastodon.social" }
+# Only the server itself is called.
+hosts: ["${MASTODON_HOST}"]
+credentials:
+  - template: api_key
+    for: Post as you
+    env: { MASTODON_TOKEN: key }
+tools:
+  - name: post_status
+    label: Posting on Mastodon
+    description: Publish a post as the account, with the asset's image (described by the title) when it has one.
+    input: { type: object, properties: { text: { type: string, description: "The post, plain text, at most 500 characters" } }, required: [text] }
+    steps:
+      # The image first, so the status can name it; skipped with no files, which leaves media_ids empty.
+      - name: media
+        for_each: files
+        request:
+          method: POST
+          url: "${MASTODON_HOST}/api/v2/media"
+          headers: { Authorization: "Bearer ${MASTODON_TOKEN}" }
+          multipart:
+            - { name: file, file: "{{file}}", filename: "{{file.name}}" }
+            - { name: description, value: "{{title}}" }
+          timeout_s: 120
+        save: { id: /id }
+      - name: status
+        request:
+          method: POST
+          url: "${MASTODON_HOST}/api/v1/statuses"
+          headers: { Authorization: "Bearer ${MASTODON_TOKEN}", Content-Type: application/json }
+          json: { status: "{{text}}", media_ids: "{{media.*.id}}", visibility: public }
+          timeout_s: 60
+        save: { url: /url }
+    result: { text: "{{status.url}}" }
+kinds:
+  # The account is the channel: its profile is where posts go.
+  - kind: mastodon
+    label: Profile
+    name: Mastodon
+    icon: megaphone
+    section: page
+    account_is_target: true
+    publish: post_status
+    text_limit: 500
+    image: { width: 1200, height: 675 }
+    preview: feed
+    writing: "Plain text, no Markdown; up to 500 characters, and every link counts as 23. Two to four hashtags at the end: that is how people find posts there. A post with an image gets no link preview, so say what the picture shows."
+service: { id: mastodon, name: Mastodon, icon: megaphone, group: social, profile_hosts: [mastodon.social, mastodon.online, mstdn.social, fosstodon.org, hachyderm.io, mas.to] }
+
+# Suggested when the owner names Mastodon as a network, or the crawl finds a profile on a common server.
+fits:
+  networks: [mastodon]
