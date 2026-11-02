@@ -5,7 +5,7 @@
 # (data-testid attributes), so when X changes those, this file does.
 id: x-browser
 name: Read, reply and post on X
-version: 0.2.1
+version: 0.3.0
 summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
 categories: [browser, community, publishing]
 icon: message-circle
@@ -13,7 +13,6 @@ avatar: avatar.svg
 transport: mcp
 program: browser
 service: { id: x, name: X, icon: message-circle, group: social, profile_hosts: [x.com, twitter.com] }
-allow: { read: "on", reply: ask, publish: ask }
 exclusive: true
 daily_cap: 15
 hosts: [x.com, twitter.com]
@@ -88,18 +87,18 @@ tools:
       - { name: send, call: browser_click, args: { selector: "[data-testid='tweetButton']" } }
       - { name: shot, call: browser_take_screenshot }
     result: { text: "Posted on X" }
-channels:
+kinds:
+  # The account is the profile: connecting it puts it in the Audience.
   - kind: x
-    label: X account
+    label: X profile
     name: X
     icon: message-circle
+    section: page
+    account_is_target: true
     publish: post
-    does: [publish, read, reply]
-    profile_hosts: [x.com, twitter.com]
     text_limit: 280
     image: { width: 1200, height: 675 }
     preview: feed
     writing: "Up to 280 characters, one idea, no hashtag pile; a question or a line that invites a reply."
-    place: {}
 fits:
   networks: [x, twitter]

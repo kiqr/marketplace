@@ -66,11 +66,14 @@ the KIQR repository; the folders here are worked examples.
   needs and what it costs, in the user's words.
 - Add an `avatar.svg`, 64 by 64, on a dark background, and name it in the
   manifest (`avatar: avatar.svg`).
-- Publishing to a social network? Declare the network on the channel kind
-  (`name`, `icon`, `profile_hosts`, `text_limit`, `image`, `preview`,
-  `writing`; see "Networks" in `docs/abilities.md`) and list `kind`, `name`,
-  `icon` and `profile_hosts` under `channels` in the index entry, so KIQR
-  recognises the business's profile there and can suggest your ability.
+- Publishing to a social network? Declare it as a kind (`kinds:` with
+  `name`, `icon`, `section`, `target` or `account_is_target`, `text_limit`,
+  `image`, `preview`, `writing`; see "Kinds" in `docs/abilities.md`), put
+  `profile_hosts` on the `service` block, and list `kind`, `name`, `icon` and
+  `profile_hosts` under `kinds` in the index entry, so KIQR recognises the
+  business's profile there and can suggest your ability. An account never
+  holds where it posts: that is the project's Audience, or the call's own
+  target fields.
 - Sending the asset's image, or a call that takes several requests
   (register an upload, send the bytes, create the post)? Use `steps` and the
   upload bodies (`multipart`, `form`, `body_file`); see "Steps" and

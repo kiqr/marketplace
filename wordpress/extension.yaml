@@ -2,13 +2,12 @@
 # application password. Each account is one site.
 id: wordpress
 name: Publish articles to WordPress
-version: 0.3.6
+version: 0.4.0
 summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Connect each site as an account with one button. Every publish asks you first until you say otherwise."
 categories: [publishing]
 avatar: avatar.svg
 icon: newspaper
 service: { id: wordpress, name: WordPress, icon: newspaper, group: website }
-allow: { publish: ask }
 transport: http
 homepage: https://wordpress.org/documentation/article/application-passwords/
 auth:
@@ -55,12 +54,16 @@ tools:
           timeout_s: 60
         save: { link: /link }
     result: { text: "{{post.link}}" }
-channels:
+kinds:
+  # One account is one site: connecting it puts its blog in the Audience.
+  # Draft or live is chosen per publish (the tool's `status`), not per site.
   - kind: wordpress
-    label: WordPress blog
+    label: Blog
+    name: WordPress
+    icon: newspaper
+    section: page
+    account_is_target: true
     publish: publish_article
-    # Draft or live is chosen per publish (the tool's `status`), not per site.
-    place: {}
 
 # Suggested only to a site that runs on WordPress (it publishes there; it serves no goal on its own).
 fits:

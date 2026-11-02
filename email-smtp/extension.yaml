@@ -4,13 +4,12 @@
 # Values live in .env; the daemon sends.
 id: kiqr-smtp
 name: Send email from your mail account
-version: 0.3.0
+version: 0.4.0
 summary: "Email over SMTP from your own address: Gmail with an app password, Fastmail, Outlook or any mail host. Send to anyone, or to a list of people you keep under Audience. Every send asks you first until you say otherwise."
 categories: [email, publishing]
 avatar: avatar.svg
 icon: mail
 service: { id: kiqr-smtp, name: Email, icon: mail, group: email }
-allow: { publish: ask }
 transport: smtp
 homepage: https://support.google.com/accounts/answer/185833
 auth:
@@ -30,13 +29,14 @@ smtp:
 provides:
   email:
     cost: free
-channels:
+kinds:
   # The account is the sender. Where a message goes is said per send (`to`),
-  # or is a list of people on the account (a place of kind `list`).
+  # or is a list in the Audience, sent from this account.
   - kind: email
     label: Email
+    icon: mail
+    section: list
     publish: email
-    place: {}
 
 # When KIQR suggests this to a new project: the goals it serves, and text in a site's HTML that shows the business already uses it.
 fits:

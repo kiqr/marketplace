@@ -13,7 +13,7 @@
 # branch people build from.
 id: github
 name: Work on GitHub
-version: 0.3.3
+version: 0.4.0
 summary: "Seemo learns your product from its repository (README, docs, releases), reads and answers issues and pull requests, follows what ships, and publishes to the site the repository builds, as pull requests in the site's own code that you merge. Connect a repository with GitHub in one click and say what Seemo may do there. Everything that writes asks you first until you say otherwise."
 categories: [publishing, community, analytics]
 avatar: avatar.svg
@@ -373,16 +373,16 @@ learn:
       url: "https://github.com/${GITHUB_REPO}/blob/HEAD/{{value}}"
     - { tool: gh_file, args: { path: CHANGELOG.md }, title: Changelog, url: "https://github.com/${GITHUB_REPO}/blob/HEAD/CHANGELOG.md" }
     - { tool: gh_releases, args: { limit: 10 }, title: Releases, url: "https://github.com/${GITHUB_REPO}/releases" }
-channels:
-  # A channel is one repository (the account's GITHUB_REPO) that builds a
-  # site: Seemo reads the code, keeps how this site publishes as instructions
-  # (save_ability), and writes each publish in the site's own code, as a pull
-  # request. No folder or format is set here: the code decides.
+kinds:
+  # A repository (the account's GITHUB_REPO) that builds a site: Seemo reads
+  # the code, keeps how this site publishes as instructions (save_ability),
+  # and writes each publish in the site's own code, as a pull request. No
+  # folder or format is set here: the code decides. The account is the spot;
+  # the branch is chosen per publish (the tool's `base_branch`).
   - kind: github-repo
-    label: GitHub repository
+    label: Site repository
     name: GitHub
     icon: github
+    section: page
+    account_is_target: true
     publish: gh_publish_pr
-    does: [publish, read, reply, manage]
-    place:
-      base_branch: { label: Branch, optional: true, placeholder: "main", help: "The branch the pull requests go into; the repository's default when empty" }

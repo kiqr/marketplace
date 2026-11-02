@@ -5,7 +5,7 @@
 # position per day, plus the top queries and pages.
 id: search-console
 name: Read Google Search Console
-version: 0.4.0
+version: 0.5.0
 summary: "Clicks, impressions, click-through rate and average position per day, with the top queries and pages, once a day into Performance. Connect with Google in one click, or use a service account."
 categories: [analytics, seo]
 avatar: avatar.svg
@@ -13,7 +13,6 @@ icon: search
 # Shares the project's Google account with Google Analytics (the same sign-in,
 # the same tokens); the Search Console property is a place on the account.
 service: { id: google, name: Google, icon: globe, group: numbers }
-allow: { measure: "on" }
 transport: http
 homepage: https://developers.google.com/webmaster-tools/v1/searchanalytics/query
 hosts: [searchconsole.googleapis.com, oauth2.googleapis.com]
@@ -39,9 +38,10 @@ connect:
     token_url: https://oauth2.googleapis.com/token
     scopes: [https://www.googleapis.com/auth/analytics.readonly, https://www.googleapis.com/auth/webmasters.readonly]
     token_env: GOOGLE_TOKEN
-# The place this works on inside the Google account: one Search Console
-# property, picked from those the account can see. `{{site}}` in the calls below.
-places:
+# What the project picks once: its Search Console property, from those the
+# Google account can see. Kept in the project, not on the account. `{{site}}`
+# in the calls below.
+settings:
   site:
     label: Search Console property
     help: "Pick it once the account is connected, or type it: a domain property starts with sc-domain:; a URL-prefix property is its exact URL"
@@ -54,9 +54,6 @@ places:
         timeout_s: 20
       list: /siteEntry/*
       value: /siteUrl
-moved:
-  keys: { GSC_TOKEN: GOOGLE_TOKEN, GSC_REFRESH_TOKEN: GOOGLE_REFRESH_TOKEN }
-  places: { GSC_SITE_URL: site }
 sources:
   search:
     requests:
