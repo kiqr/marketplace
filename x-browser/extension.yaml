@@ -5,7 +5,7 @@
 # (data-testid attributes), so when X changes those, this file does.
 id: x-browser
 name: Read, reply and post on X
-version: 0.2.0
+version: 0.2.1
 summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
 categories: [browser, community, publishing]
 icon: message-circle
@@ -23,8 +23,7 @@ session:
   check:
     - { name: open, call: browser_navigate, args: { url: "https://x.com/home", wait_until: domcontentloaded } }
     - { name: look, call: browser_snapshot }
-  # The account menu in the left rail shows only when signed in; a sign-in page shows the password field.
-  signed_in_when: "AccountSwitcher"
+  # No marker: the model reads the home page (a timeline and a compose box, or the sign-in buttons), in any language.
   # Signing in starts here; the model reads each page and names the fields, so the markup X serves (and its language) does not matter.
   login_url: "https://x.com/i/flow/login"
   # The model says when a page needs a person, in any language; these are a fast path.
