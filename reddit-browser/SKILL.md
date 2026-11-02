@@ -1,7 +1,7 @@
 ---
 name: Work on Reddit
 description: When the user asks what people say on Reddit, to find subreddits, to search Reddit, to comment on a post, or to post in a subreddit; and for tasks that take part in communities.
-categories: [community, publishing]
+categories: [social]
 icon: messages-square
 kinds: [reddit]
 ---

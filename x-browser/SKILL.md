@@ -1,7 +1,7 @@
 ---
 name: Work on X
 description: When the user asks what is happening on X, to search X, to reply to a post, or to post on X.
-categories: [community, publishing]
+categories: [social]
 icon: message-circle
 kinds: [x]
 ---

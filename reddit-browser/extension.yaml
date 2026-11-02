@@ -6,9 +6,9 @@
 # Uses old.reddit.com, whose markup is plain and stable.
 id: reddit-browser
 name: Read, reply and post on Reddit
-version: 0.3.1
+version: 0.3.2
 summary: "Your Reddit account in a browser of Seemo's own: it finds subreddits, reads and searches them, comments and posts as you, asking first until you let it act on its own in the communities of your Audience. Sign in once; the login is kept."
-categories: [browser, community, publishing]
+categories: [social]
 icon: messages-square
 avatar: avatar.svg
 transport: mcp

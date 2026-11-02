@@ -5,9 +5,9 @@
 # (data-testid attributes), so when X changes those, this file does.
 id: x-browser
 name: Read, reply and post on X
-version: 0.3.0
+version: 0.3.1
 summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
-categories: [browser, community, publishing]
+categories: [social]
 icon: message-circle
 avatar: avatar.svg
 transport: mcp

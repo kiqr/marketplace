@@ -13,9 +13,9 @@
 # branch people build from.
 id: github
 name: Work on GitHub
-version: 0.4.0
+version: 0.4.1
 summary: "Seemo learns your product from its repository (README, docs, releases), reads and answers issues and pull requests, follows what ships, and publishes to the site the repository builds, as pull requests in the site's own code that you merge. Connect a repository with GitHub in one click and say what Seemo may do there. Everything that writes asks you first until you say otherwise."
-categories: [publishing, community, analytics]
+categories: [publishing, analytics]
 avatar: avatar.svg
 icon: github
 service: { id: github, name: GitHub, icon: github, group: website, profile_hosts: [github.com] }
