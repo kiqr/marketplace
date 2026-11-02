@@ -1,0 +1,68 @@
+# A Telegram channel through the Bot API: a bot from @BotFather, added to the
+# channel as an administrator, posts there. The bot's token is the credential
+# (in the Vault for telegram.org); it is part of every URL, and only
+# api.telegram.org is ever called. A post with an image is one photo with
+# the text as its caption (which Telegram caps at 1024 characters); a post
+# without is one message. Needs KIQR 0.6.0 or later: the `unless:` step
+# that picks the plain message; an older KIQR would send both.
+id: telegram
+name: Post in a Telegram channel
+version: 0.1.0
+summary: "Posts from the library go into your Telegram channel, as a photo with the text when they have an image. Make a bot with @BotFather, add it to the channel as an admin, and give KIQR its token. Every post asks you first until you say otherwise. Needs KIQR 0.6.0 or later."
+categories: [social, publishing]
+avatar: avatar.svg
+icon: send
+transport: http
+homepage: https://core.telegram.org/bots/api#sendmessage
+hosts: [api.telegram.org]
+credentials:
+  - template: api_key
+    hosts: [telegram.org]
+    for: Post as the bot
+    env: { TELEGRAM_TOKEN: key }
+tools:
+  - name: post
+    label: Posting on Telegram
+    description: Send the text to a channel, as the caption of the asset's image when it has one.
+    input: { type: object, properties: { text: { type: string, description: "The post, plain text, at most 1000 characters" }, chat: { type: string, description: "The channel's @username, or the chat id of a private channel" } }, required: [text, chat] }
+    steps:
+      - name: photo
+        when: "{{files}}"
+        request:
+          method: POST
+          url: "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto"
+          multipart:
+            - { name: chat_id, value: "{{chat}}" }
+            - { name: photo, file: "{{files.0}}", filename: "{{files.0.name}}" }
+            - { name: caption, value: "{{text}}" }
+          timeout_s: 120
+        save: { id: /result/message_id, username: /result/chat/username }
+      - name: message
+        unless: "{{files}}"
+        request:
+          method: POST
+          url: "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage"
+          headers: { Content-Type: application/json }
+          json: { chat_id: "{{chat}}", text: "{{text}}", link_preview_options: { prefer_large_media: true } }
+          timeout_s: 60
+        save: { id: /result/message_id, username: /result/chat/username }
+    # Exactly one of the two steps ran; the other's fields are empty. Right for a public channel (one with a username).
+    result: { text: "https://t.me/{{photo.username}}{{message.username}}/{{photo.id}}{{message.id}}" }
+kinds:
+  - kind: telegram
+    label: Channel
+    name: Telegram
+    icon: send
+    section: page
+    publish: post
+    target:
+      chat: { label: Channel, help: "The channel's @username, or its chat id (starting with -100) for a private one; the bot must be an administrator there", placeholder: "@acmebakery", pattern: "^(@[A-Za-z][A-Za-z0-9_]{3,31}|-?[0-9]{5,20})$" }
+    text_limit: 1000
+    image: { width: 1280, height: 720 }
+    preview: feed
+    writing: "Plain text, no Markdown. Up to 1000 characters, so it fits as a photo caption. One link, on its own line at the end; Telegram previews it under a post without a photo."
+service: { id: telegram, name: Telegram, icon: send, group: social, profile_hosts: [t.me, telegram.me] }
+
+# Suggested when the owner names Telegram as a network, or the crawl finds a t.me link.
+fits:
+  networks: [telegram]
