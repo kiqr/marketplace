@@ -2,9 +2,10 @@
 # requests, what it shipped and what happens in it, how it does (stars,
 # traffic, where visitors come from), what people say about the product
 # elsewhere on GitHub, and anything published to the site the repository
-# builds, as a pull request in the site's own format. The repository is the
-# project's setting: Seemo learns the product from it, publishes to the site it
-# builds, or both, as its channel says. Sign in with
+# builds, as a pull request in the site's own format. The product's repository
+# is the project's setting (Seemo learns the product from it); a website built
+# from a repository is a website channel that picks GitHub and names its own
+# repository, so each site publishes to its own. Sign in with
 # GitHub in one click through KIQR's GitHub app (kiqr.cloud holds it; no
 # token is kept there; private repositories work once the app is installed on
 # them), or paste a fine-grained token. Reading runs at once; anything that
@@ -13,7 +14,7 @@
 # branch people build from.
 id: github
 name: Work on GitHub
-version: 0.5.0
+version: 0.6.0
 summary: "Seemo learns your product from its repository (README, docs, releases), reads and answers issues and pull requests, follows what ships, and publishes to the site the repository builds, as pull requests in the site's own code that you merge. Connect a repository with GitHub in one click and say what Seemo may do there. Everything that writes asks you first until you say otherwise."
 categories: [publishing, analytics]
 avatar: avatar.svg
@@ -33,8 +34,8 @@ credentials:
     env: { GITHUB_TOKEN: "token|key" }
 settings:
   github_repo:
-    label: Repository
-    help: "The repository, as owner/name: pick it from the list, or type it. Only repositories KIQR's GitHub app is installed on are listed, private ones included: install it on the repository from https://github.com/apps/kiqr/installations/new, then sign in again."
+    label: Product repository
+    help: "The product's code, as owner/name: Seemo learns the product from it and follows its issues and releases. A website built from a repository is a channel of its own (Marketing → Channels), with its own repository. Only repositories KIQR's GitHub app is installed on are listed, private ones included: install it on the repository from https://github.com/apps/kiqr/installations/new, then sign in again."
     placeholder: "owner/name"
     choices:
       request:
@@ -52,7 +53,8 @@ tools:
   - name: gh_repo
     label: Reading the repository
     description: "The repository: description, homepage, topics, stars, forks, watchers, open issues, language, licence, when it was last pushed."
-    request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" } } }
+    request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_list_repos
     label: Listing GitHub repositories
     description: "The repositories this sign-in can see (with the GitHub app: those it is installed on), most recently pushed first, with their stars."
@@ -306,6 +308,7 @@ tools:
     input:
       type: object
       properties:
+        repo: { type: string, description: "owner/name of the repository that builds the site; the website channel's own when published there" }
         title: { type: string }
         changes:
           type: array
@@ -323,29 +326,29 @@ tools:
       required: [title, changes]
     steps:
       - name: info
-        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
         save: { branch: /default_branch }
       - name: base_ref
-        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/git/ref/heads/{{base_branch|{{info.branch}}}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/git/ref/heads/{{base_branch|{{info.branch}}}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
         save: { sha: /object/sha }
       - name: base_commit
-        request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/git/commits/{{base_ref.sha}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
+        request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/git/commits/{{base_ref.sha}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
         save: { tree: /tree/sha }
       - name: tree
-        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/git/trees", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { base_tree: "{{base_commit.tree}}", tree: "{{changes}}" }, timeout_s: 30 }
+        request: { method: POST, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/git/trees", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { base_tree: "{{base_commit.tree}}", tree: "{{changes}}" }, timeout_s: 30 }
         save: { sha: /sha }
       - name: change
-        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/git/commits", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { message: "Add {{title}}", tree: "{{tree.sha}}", parents: ["{{base_ref.sha}}"] }, timeout_s: 30 }
+        request: { method: POST, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/git/commits", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { message: "Add {{title}}", tree: "{{tree.sha}}", parents: ["{{base_ref.sha}}"] }, timeout_s: 30 }
         save: { sha: /sha }
       - name: ref
-        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/git/refs", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { ref: "refs/heads/kiqr/{{date}}-{{asset.id}}", sha: "{{change.sha}}" }, timeout_s: 30 }
+        request: { method: POST, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/git/refs", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { ref: "refs/heads/kiqr/{{date}}-{{asset.id}}", sha: "{{change.sha}}" }, timeout_s: 30 }
       # The asset's images, one commit each on the new branch.
       - name: images
         when: "{{image_dir}}"
         for_each: files
-        request: { method: PUT, url: "https://api.github.com/repos/${GITHUB_REPO}/contents/{{image_dir}}/{{file.name}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { message: "Add {{file.name}}", content: "{{file.base64}}", branch: "kiqr/{{date}}-{{asset.id}}" }, timeout_s: 120 }
+        request: { method: PUT, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/contents/{{image_dir}}/{{file.name}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { message: "Add {{file.name}}", content: "{{file.base64}}", branch: "kiqr/{{date}}-{{asset.id}}" }, timeout_s: 120 }
       - name: pr
-        request: { method: POST, url: "https://api.github.com/repos/${GITHUB_REPO}/pulls", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { title: "{{title}}", head: "kiqr/{{date}}-{{asset.id}}", base: "{{base_branch|{{info.branch}}}}", body: "{{summary}}\n\nPublished by Seemo from KIQR. Merge to put it on the site.", draft: "{{draft}}" }, timeout_s: 30 }
+        request: { method: POST, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { title: "{{title}}", head: "kiqr/{{date}}-{{asset.id}}", base: "{{base_branch|{{info.branch}}}}", body: "{{summary}}\n\nPublished by Seemo from KIQR. Merge to put it on the site.", draft: "{{draft}}" }, timeout_s: 30 }
         save: { url: /html_url }
     result: { text: "{{pr.url}}" }
 # A repository is also a source: with learning on, KIQR reads what the code
@@ -355,25 +358,42 @@ tools:
 learn:
   label: "Learn the product from its README, docs and releases"
   documents:
-    - { tool: gh_repo, title: "About ${GITHUB_REPO}", url: "https://github.com/${GITHUB_REPO}" }
-    - { tool: gh_readme, title: README, url: "https://github.com/${GITHUB_REPO}#readme" }
+    - { tool: gh_repo, title: "About {{repo|${GITHUB_REPO}}}", url: "https://github.com/{{repo|${GITHUB_REPO}}}" }
+    - { tool: gh_readme, title: README, url: "https://github.com/{{repo|${GITHUB_REPO}}}#readme" }
     - tool: gh_tree
       args: { path: docs }
       each: { where: { type: file }, only: [.md, .mdx, .markdown], value: /path, tool: gh_file, arg: path, max: 20 }
       title: "{{value}}"
-      url: "https://github.com/${GITHUB_REPO}/blob/HEAD/{{value}}"
-    - { tool: gh_file, args: { path: CHANGELOG.md }, title: Changelog, url: "https://github.com/${GITHUB_REPO}/blob/HEAD/CHANGELOG.md" }
-    - { tool: gh_releases, args: { limit: 10 }, title: Releases, url: "https://github.com/${GITHUB_REPO}/releases" }
+      url: "https://github.com/{{repo|${GITHUB_REPO}}}/blob/HEAD/{{value}}"
+    - { tool: gh_file, args: { path: CHANGELOG.md }, title: Changelog, url: "https://github.com/{{repo|${GITHUB_REPO}}}/blob/HEAD/CHANGELOG.md" }
+    - { tool: gh_releases, args: { limit: 10 }, title: Releases, url: "https://github.com/{{repo|${GITHUB_REPO}}}/releases" }
 kinds:
-  # A repository (the account's GITHUB_REPO) that builds a site: Seemo reads
-  # the code, keeps how this site publishes as instructions (save_ability),
-  # and writes each publish in the site's own code, as a pull request. No
-  # folder or format is set here: the code decides. The account is the spot;
-  # the branch is chosen per publish (the tool's `base_branch`).
+  # How a website is published when a repository builds it: a website channel
+  # picks GitHub and names its repository, and Seemo reads the code, keeps how
+  # this site publishes as instructions (save_ability), and writes each
+  # publish in the site's own code, as a pull request. No folder or format is
+  # set here: the code decides. The branch is chosen per publish (the tool's
+  # `base_branch`).
   - kind: github-repo
-    label: Site repository
+    label: Website from a repository
     name: GitHub
     icon: github
     section: page
-    account_is_target: true
     publish: gh_publish_pr
+    target:
+      repo:
+        label: Site repository
+        help: "The repository that builds the site, as owner/name. Only repositories KIQR's GitHub app is installed on are listed: install it from https://github.com/apps/kiqr/installations/new, then sign in again."
+        placeholder: owner/name
+        pattern: "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        choices:
+          request:
+            method: GET
+            url: "https://api.github.com/user/repos"
+            query: { per_page: "100", sort: pushed, page: "{{page}}" }
+            headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }
+            timeout_s: 20
+          list: /*
+          value: /full_name
+          label: /full_name
+          pages: 10

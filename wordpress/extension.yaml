@@ -1,9 +1,12 @@
 # Publish articles to a WordPress site through its REST API, with an
-# application password from the Vault. The site is the project's setting.
+# application password from the Vault. The site is a website channel that
+# picks WordPress as how it is published: its address reaches every call as
+# ${SITE_URL}, and its publisher is the site's application password. Nothing
+# about the site is kept here, so one project can publish to several.
 id: wordpress
 name: Publish articles to WordPress
-version: 0.5.0
-summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Connect each site with one button, or give it an application password from the Vault. Every publish asks you first until you say otherwise."
+version: 0.6.0
+summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Add your site as a website channel, pick WordPress, and connect it with one button or an application password from the Vault. Every publish asks you first until you say otherwise."
 categories: [publishing]
 avatar: avatar.svg
 icon: newspaper
@@ -15,26 +18,22 @@ credentials:
   - template: app_password
     for: Publish posts on your site
     env: { WP_USER: username, WP_APP_PASSWORD: password }
-    # One click: WordPress's own "authorize application" page makes the app
-    # password and sends it back; it becomes the credential, for this site.
+    # One click, from the website channel: WordPress's own "authorize
+    # application" page makes the app password and sends it back; it becomes
+    # the credential for this site and the channel's publisher.
     # WordPress only sends it back over https; on a plain-http KIQR the page
     # shows it once and the user types it into the Vault's form.
     connect:
       label: Connect with WordPress
       flow: redirect
-      needs: [WP_SITE]
-      url: "${WP_SITE}/wp-admin/authorize-application.php?app_name=KIQR&app_id={{app_id}}"
+      needs: [SITE_URL]
+      url: "${SITE_URL}/wp-admin/authorize-application.php?app_name=KIQR&app_id={{app_id}}"
       callback_params: [success_url, reject_url]
       callback: https
-      returns: { WP_SITE: site_url, WP_USER: user_login, WP_APP_PASSWORD: password }
+      returns: { SITE_URL: site_url, WP_USER: user_login, WP_APP_PASSWORD: password }
       denied: { param: success, equals: "false" }
-settings:
-  wp_site: { label: Your site's address, placeholder: "https://yoursite.com" }
-hosts: ["${WP_SITE}"]
-# One button instead of the three keys: WordPress's own "Authorize application"
-# page (WordPress 5.6 and later) makes an application password for KIQR and
-# sends it back. WordPress only sends it back over https; on a plain-http KIQR
-# the page shows it once and the user pastes it.
+# Whatever site the website channel is on.
+hosts: ["${SITE_URL}"]
 tools:
   - name: publish_article
     label: Publishing to WordPress
@@ -46,7 +45,7 @@ tools:
         when: "{{files}}"
         request:
           method: POST
-          url: "${WP_SITE}/wp-json/wp/v2/media"
+          url: "${SITE_URL}/wp-json/wp/v2/media"
           basic_auth: ["${WP_USER}", "${WP_APP_PASSWORD}"]
           headers: { Content-Disposition: 'attachment; filename="{{files.0.name}}"' }
           body_file: "{{files.0}}"
@@ -55,21 +54,20 @@ tools:
       - name: post
         request:
           method: POST
-          url: "${WP_SITE}/wp-json/wp/v2/posts"
+          url: "${SITE_URL}/wp-json/wp/v2/posts"
           basic_auth: ["${WP_USER}", "${WP_APP_PASSWORD}"]
           json: { title: "{{title}}", content: "{{html}}", status: "{{status|draft}}", featured_media: "{{cover.id}}" }
           timeout_s: 60
         save: { link: /link }
     result: { text: "{{post.link}}" }
 kinds:
-  # The site is the channel: its blog is where posts go.
-  # Draft or live is chosen per publish (the tool's `status`), not per site.
+  # How a website is published when WordPress hosts it: the website channel
+  # is the site. Draft or live is chosen per publish (the tool's `status`).
   - kind: wordpress
-    label: Blog
+    label: Website on WordPress
     name: WordPress
     icon: newspaper
     section: page
-    account_is_target: true
     publish: publish_article
 
 # Suggested only to a site that runs on WordPress (it publishes there; it serves no goal on its own).
