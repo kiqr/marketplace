@@ -4,7 +4,7 @@
 # X's own markup (data-testid attributes), so when X changes, this file does.
 id: x-browser
 name: Read, reply and post on X
-version: 0.1.0
+version: 0.1.1
 summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
 categories: [browser, community, publishing]
 icon: message-circle
@@ -24,15 +24,15 @@ session:
     - { name: look, call: browser_snapshot }
   # The account menu in the left rail shows only when signed in; a sign-in page shows the password field.
   signed_in_when: "AccountSwitcher"
+  # X's sign-in (seen 2026-11-02) is one page with both fields: `username_or_email` (autocomplete "username webauthn") and `password`.
   login:
     - { name: open, call: browser_navigate, args: { url: "https://x.com/i/flow/login", wait_until: domcontentloaded } }
-    - { name: user, call: browser_type, args: { selector: "input[autocomplete='username']", text: "{{credential.username}}" } }
-    - { name: next, call: browser_press_key, args: { key: Enter } }
+    - { name: user, call: browser_type, args: { selector: "input[name='username_or_email'], input[autocomplete~='username']", text: "{{credential.username}}" } }
     - { name: pass, call: browser_type, args: { selector: "input[name='password']", text: "{{credential.password}}" } }
     - { name: go, call: browser_press_key, args: { key: Enter } }
     - { name: otp, call: browser_type, args: { selector: "input[data-testid='ocfEnterTextTextInput']", text: "{{credential.otp}}" }, when: "{{credential.otp}}" }
     - { name: otp_go, call: browser_press_key, args: { key: Enter }, when: "{{credential.otp}}" }
-  blocked_when: ["arkose", "verify your identity", "unusual login activity", "confirm your phone", "suspicious"]
+  blocked_when: ["arkose", "verify your identity", "unusual login activity", "confirm your phone", "suspicious", "verifica tu identidad", "actividad inusual", "sospechos"]
   every: 6h
 live_view:
   frame: { name: frame, call: browser_watch }

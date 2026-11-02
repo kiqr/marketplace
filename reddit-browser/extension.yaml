@@ -4,7 +4,7 @@
 # Uses old.reddit.com, whose markup is plain and stable.
 id: reddit-browser
 name: Read, reply and post on Reddit
-version: 0.1.0
+version: 0.1.1
 summary: "Your Reddit account in a browser of Seemo's own: it reads the subreddits you pick, searches, comments and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
 categories: [browser, community, publishing]
 icon: messages-square
@@ -24,13 +24,14 @@ session:
     - { name: look, call: browser_snapshot }
   signed_out_when: ['"passwd"', '"type":"password"', '"type": "password"']
   login:
-    - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/login", wait_until: domcontentloaded } }
-    - { name: user, call: browser_type, args: { selector: "#login-username, input[name='username']", text: "{{credential.username}}" } }
-    - { name: pass, call: browser_type, args: { selector: "#login-password, input[name='password']", text: "{{credential.password}}" } }
+    # Reddit's sign-in (seen 2026-11-02): `username` and `password` on www.reddit.com/login, inside web components; a one-time code goes in `appOtp`.
+    - { name: open, call: browser_navigate, args: { url: "https://www.reddit.com/login/", wait_until: domcontentloaded } }
+    - { name: user, call: browser_type, args: { selector: "input[name='username']", text: "{{credential.username}}" } }
+    - { name: pass, call: browser_type, args: { selector: "input[name='password']", text: "{{credential.password}}" } }
     - { name: go, call: browser_press_key, args: { key: Enter } }
-    - { name: otp, call: browser_type, args: { selector: "input[name='otp'], #login-otp", text: "{{credential.otp}}" }, when: "{{credential.otp}}" }
+    - { name: otp, call: browser_type, args: { selector: "input[name='appOtp'], input[name='otp']", text: "{{credential.otp}}" }, when: "{{credential.otp}}" }
     - { name: otp_go, call: browser_press_key, args: { key: Enter }, when: "{{credential.otp}}" }
-  blocked_when: ["captcha", "verify you are human", "two-factor", "suspicious"]
+  blocked_when: ["captcha", "verify you are human", "two-factor", "suspicious", "verifica que eres humano", "sospechos"]
   every: 6h
 live_view:
   frame: { name: frame, call: browser_watch }
