@@ -6,7 +6,7 @@
 # Uses old.reddit.com, whose markup is plain and stable.
 id: reddit-browser
 name: Read, reply and post on Reddit
-version: 0.4.1
+version: 0.4.2
 summary: "Your Reddit account in a browser of Seemo's own: it finds subreddits, reads and searches them, comments and posts as you, asking first until you let it act on its own in a channel. Sign in once; the login is kept."
 categories: [social]
 icon: messages-square
@@ -22,14 +22,12 @@ url_args: [url]
 expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_screenshot]
 session:
   check:
-    - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/", wait_until: domcontentloaded } }
-    # A signed-in browser can pass through old.reddit.com/login ("Welcome back! You are already logged in")
-    # on its way back: wait (up to 12 s) until it leaves the login page, or stays there, before looking.
-    - { name: settle, call: browser_evaluate, args: { expression: "new Promise(r => { const t = Date.now(); (function w() { if (!location.pathname.startsWith('/login') || Date.now() - t > 12000) r(location.href); else setTimeout(w, 400); })(); })" } }
+    # www.reddit.com, not old: a browser signed in on Reddit can stay on old.reddit.com's "Welcome back!
+    # You are already logged in" page instead of being sent back (seen 2026-11-02), which reads as signed out.
+    - { name: open, call: browser_navigate, args: { url: "https://www.reddit.com/", wait_until: load } }
     - { name: look, call: browser_snapshot }
-  # Signed out: a password field, or Reddit's own sign-in page, where it sends a browser that is not signed in
-  # (seen 2026-11-02: old.reddit.com/login/?reason=lor2, built of web components, so the snapshot shows no field at all).
-  signed_out_when: ['"passwd"', '"type":"password"', '"type": "password"', 'reddit.com/login', 'reason=lor']
+  # Signed out: the header's Log In button and its link, or a password field (seen 2026-11-02, any language).
+  signed_out_when: ['"login-button"', 'reddit.com/login', '"type":"password"', '"type": "password"']
   # Signing in starts here; the model reads the page and names the fields, so the markup Reddit serves (and its language) does not matter.
   login_url: "https://www.reddit.com/login/"
   # The model says when a page needs a person, in any language; these are a fast path.
