@@ -5,7 +5,7 @@
 # (data-testid attributes), so when X changes those, this file does.
 id: x-browser
 name: Read, reply and post on X
-version: 0.4.0
+version: 0.4.1
 summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
 categories: [social]
 icon: message-circle
@@ -22,6 +22,8 @@ expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_scr
 session:
   check:
     - { name: open, call: browser_navigate, args: { url: "https://x.com/home", wait_until: domcontentloaded } }
+    # X draws everything after load: wait (up to 20 s) until it shows something to act on, else the check reads a blank page.
+    - { name: settle, call: browser_evaluate, args: { expression: "new Promise(r => { const t = Date.now(); (function w() { if (document.querySelector('input, [role=button], [data-testid]') || Date.now() - t > 20000) r(location.href); else setTimeout(w, 400); })(); })" } }
     - { name: look, call: browser_snapshot }
   # No marker: the model reads the home page (a timeline and a compose box, or the sign-in buttons), in any language.
   # Signing in starts here; the model reads each page and names the fields, so the markup X serves (and its language) does not matter.
