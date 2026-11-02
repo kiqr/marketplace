@@ -74,6 +74,13 @@ the KIQR repository; the folders here are worked examples.
   business's profile there and can suggest your ability. An account never
   holds where it posts: that is the project's Audience, or the call's own
   target fields.
+- Reaching the business's own files (a folder, a drive, a bucket)? Declare
+  `media:` with a `list` request (pointers to each item's `id`, `name`, and
+  `mime`, `bytes`, `modified`, `url` when the service gives them) and a `get`
+  request that fetches one item by `{{id}}`; see "Media" in
+  `docs/abilities.md`. The items show under Library → Media, where the user
+  brings them into the Library; Seemo then designs with them. File the entry
+  under the `media` category.
 - Sending the asset's image, or a call that takes several requests
   (register an upload, send the bytes, create the post)? Use `steps` and the
   upload bodies (`multipart`, `form`, `body_file`); see "Steps" and
