@@ -1,0 +1,37 @@
+# A Cloudinary media library as a source for Library → Media: the Admin API
+# lists the cloud's images (key and secret from the console, as a user name
+# and password in the Vault for cloudinary.com), and each one is fetched by
+# its own delivery URL, with no credential in that request. Images only, so
+# nothing has to be filtered out.
+id: cloudinary
+name: Bring pictures from Cloudinary
+version: 0.1.0
+summary: "The images in your Cloudinary media library show under Library → Media, where you bring the ones Seemo may design with into the Library. Needs the cloud name, an API key and its secret from the Cloudinary console."
+categories: [media]
+avatar: avatar.svg
+icon: images
+transport: http
+homepage: https://cloudinary.com/documentation/admin_api#get_resources
+hosts: [api.cloudinary.com, res.cloudinary.com]
+credentials:
+  - template: app_password
+    hosts: [cloudinary.com]
+    for: List and fetch your images
+    env: { CLOUDINARY_KEY: username, CLOUDINARY_SECRET: password }
+settings:
+  cloudinary_cloud: { label: Cloud name, help: "Shown on the console's front page, and in your delivery URLs after res.cloudinary.com/", placeholder: "acme" }
+media:
+  list:
+    request:
+      method: GET
+      url: "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/resources/image?max_results=500&direction=desc"
+      basic_auth: ["${CLOUDINARY_KEY}", "${CLOUDINARY_SECRET}"]
+      timeout_s: 40
+    items: /resources
+    id: /public_id
+    name: /public_id
+    bytes: /bytes
+    modified: /created_at
+    url: /secure_url
+  get:
+    request: { method: GET, url: "{{url}}", timeout_s: 40 }
