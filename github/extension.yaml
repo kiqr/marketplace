@@ -2,9 +2,9 @@
 # requests, what it shipped and what happens in it, how it does (stars,
 # traffic, where visitors come from), what people say about the product
 # elsewhere on GitHub, and anything published to the site the repository
-# builds, as a pull request in the site's own format. An account is one
-# repository: Seemo learns the product from it, publishes to the site it
-# builds, or both, as its permissions say. Add one per repository. Connect with
+# builds, as a pull request in the site's own format. The repository is the
+# project's setting: Seemo learns the product from it, publishes to the site it
+# builds, or both, as its channel says. Sign in with
 # GitHub in one click through KIQR's GitHub app (kiqr.cloud holds it; no
 # token is kept there; private repositories work once the app is installed on
 # them), or paste a fine-grained token. Reading runs at once; anything that
@@ -13,20 +13,28 @@
 # branch people build from.
 id: github
 name: Work on GitHub
-version: 0.4.1
+version: 0.5.0
 summary: "Seemo learns your product from its repository (README, docs, releases), reads and answers issues and pull requests, follows what ships, and publishes to the site the repository builds, as pull requests in the site's own code that you merge. Connect a repository with GitHub in one click and say what Seemo may do there. Everything that writes asks you first until you say otherwise."
 categories: [publishing, analytics]
 avatar: avatar.svg
 icon: github
-service: { id: github, name: GitHub, icon: github, group: website, profile_hosts: [github.com] }
-allow: { publish: ask, reply: ask, manage: ask, learn: "on" }
 transport: http
 homepage: https://docs.github.com/en/rest
 hosts: [api.github.com]
-auth:
-  - env: GITHUB_REPO
+# "Sign in with GitHub" through kiqr.cloud, or a fine-grained token for one
+# repository (Contents, Pull requests and Issues read and write; Administration
+# for traffic, topics and the About line), kept in the Vault.
+credentials:
+  - template: [oauth, api_key]
+    provider: github
+    hosts: [github.com]
+    scopes: [public_repo, read:user, read:org]
+    for: Work on your repository
+    env: { GITHUB_TOKEN: "token|key" }
+settings:
+  github_repo:
     label: Repository
-    help: "The repository, as owner/name: search the list once connected, or type it. Only repositories KIQR's GitHub app is installed on are listed, private ones included: install it on the repository (or the organization) from the app's page on GitHub, then connect again. Signed in before the app? Connect again too."
+    help: "The repository, as owner/name: pick it from the list, or type it. Only repositories KIQR's GitHub app is installed on are listed, private ones included: install it on the repository from https://github.com/apps/kiqr/installations/new, then sign in again."
     placeholder: "owner/name"
     choices:
       request:
@@ -39,23 +47,6 @@ auth:
       value: /full_name
       label: /full_name
       pages: 10
-  - env: GITHUB_TOKEN
-    label: GitHub sign-in or token
-    optional: true
-    typed: true
-    help: "Kept by Connect with GitHub. Or paste a fine-grained token for this one repository instead: https://github.com/settings/personal-access-tokens (Contents, Pull requests and Issues read and write; Administration for traffic, topics and the About line)"
-  - env: GITHUB_REFRESH_TOKEN
-    label: GitHub sign-in renewal
-    optional: true
-connect:
-  - label: Connect with GitHub
-    flow: cloud
-    provider: github
-    scopes: [public_repo, read:user, read:org]
-    token_env: GITHUB_TOKEN
-    refresh_env: GITHUB_REFRESH_TOKEN
-    # A GitHub App sees only the repositories it is installed on, and its sign-in page never offers the installation.
-    grant: { label: Install KIQR on your repositories, url: "https://github.com/apps/kiqr/installations/new", help: "pick the account or organization, then the repositories" }
 tools:
   # ------------------------------------------------------------ the repository
   - name: gh_repo
@@ -105,13 +96,13 @@ tools:
     request: { method: GET, url: "https://api.github.com/repos/${GITHUB_REPO}/issues", query: { state: "{{state|open}}", labels: "{{labels}}", sort: updated, per_page: "{{limit|30}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_issue
     label: Reading an issue
-    description: "One issue or pull request: title, body, labels, state, author and reactions. In this account's repository, or another (`repo`)."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    description: "One issue or pull request: title, body, labels, state, author and reactions. In the project's repository, or another (`repo`)."
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, number: { type: integer } }, required: [number] }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/issues/{{number}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_issue_comments
     label: Reading an issue's comments
     description: "The comments on an issue or pull request, oldest first: the whole conversation before replying."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, number: { type: integer } }, required: [number] }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/issues/{{number}}/comments", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_discussions
     label: Reading the discussions
@@ -136,73 +127,73 @@ tools:
     input: { type: object, properties: { query: { type: string }, sort: { type: string, enum: [stars, forks, updated] }, limit: { type: integer } }, required: [query] }
     request: { method: GET, url: "https://api.github.com/search/repositories", query: { q: "{{query}}", sort: "{{sort|stars}}", per_page: "{{limit|20}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_me
-    label: Reading the GitHub account
+    label: Reading the GitHub repository
     description: "Who this sign-in is: login, name, profile, followers, and the organisations it belongs to."
     request: { method: GET, url: "https://api.github.com/user", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   # ------------------------------------------------------------ pull requests
   - name: gh_pulls
     label: Reading the pull requests
     description: "Pull requests of the repository (or `repo`), most recently updated first: title, author, branch, draft or not, labels."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, state: { type: string, enum: [open, closed, all] }, limit: { type: integer } } }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, state: { type: string, enum: [open, closed, all] }, limit: { type: integer } } }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls", query: { state: "{{state|open}}", sort: updated, direction: desc, per_page: "{{limit|30}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_pull
     label: Reading a pull request
     description: "One pull request: title, description, branches, whether it is merged or mergeable, additions and deletions, reviewers."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, number: { type: integer } }, required: [number] }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls/{{number}}", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_pull_files
     label: Reading a pull request's changes
     description: "The files a pull request changes, each with its patch: what it actually does, before reviewing or describing it."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, number: { type: integer } }, required: [number] }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls/{{number}}/files", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 30 }
   - name: gh_pull_reviews
     label: Reading a pull request's reviews
     description: "The reviews of a pull request: who approved, who asked for changes, and what they said."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer } }, required: [number] }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, number: { type: integer } }, required: [number] }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/pulls/{{number}}/reviews", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   # ------------------------------------------------------ code and what shipped
   - name: gh_branches
     label: Reading the branches
     description: "The repository's branches and the commit each points at."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" } } }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" } } }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/branches", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_compare
     label: Comparing two versions
     description: "What changed between two tags, branches or commits (`base`...`head`): the commits in between and the files they touched. What shipped since the last release, for notes and posts."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, base: { type: string, description: "e.g. v1.2.0" }, head: { type: string, description: "e.g. main or v1.3.0" } }, required: [base, head] }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, base: { type: string, description: "e.g. v1.2.0" }, head: { type: string, description: "e.g. main or v1.3.0" } }, required: [base, head] }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/compare/{{base}}...{{head}}", query: { per_page: "100" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 30 }
   - name: gh_tree
     label: Listing a folder in the repository
     description: "The files and folders at `path` (the root when left out) on a branch."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, path: { type: string }, branch: { type: string, description: "The default branch when left out" } } }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, path: { type: string }, branch: { type: string, description: "The default branch when left out" } } }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/contents/{{path}}", query: { ref: "{{branch}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_files
     label: Reading the repository's layout
     description: "Every file path in the repository at once (the whole tree from the root, with sizes): how the project is built and where things live (package.json, the framework's config, routes, pages, components, content, public images). Start here to understand a codebase, then read the files that matter with `gh_file`. `truncated` true means a very large repository: list folders with `gh_tree` instead."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, branch: { type: string, description: "The default branch (HEAD) when left out" } } }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, branch: { type: string, description: "The default branch (HEAD) when left out" } } }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/git/trees/{{branch|HEAD}}", query: { recursive: "1" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 30 }
   - name: gh_file
     label: Reading a file in the repository
     description: "One file's text (a page, a component, a post, a config): to learn how the site is built and match it, or to change a file with `gh_open_pr`."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, path: { type: string }, branch: { type: string, description: "The default branch when left out" } }, required: [path] }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, path: { type: string }, branch: { type: string, description: "The default branch when left out" } }, required: [path] }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/contents/{{path}}", query: { ref: "{{branch}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github.raw, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_readme
     label: Reading the README
     description: "The repository's README, as text: what the product is and how people start with it."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" } } }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" } } }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/readme", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github.raw, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   - name: gh_events
     label: Reading what happened in the repository
     description: "The repository's latest activity, newest first: pushes with their commits, pull requests opened and merged, issues, comments, releases, stars. Read it since the last time to follow the repository."
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, limit: { type: integer, description: "Default 30, at most 100" } } }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, limit: { type: integer, description: "Default 30, at most 100" } } }
     request: { method: GET, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/events", query: { per_page: "{{limit|30}}" }, headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, timeout_s: 20 }
   # ------------------------------------------------- writing: each asks first
   - name: gh_comment
     label: Replying on GitHub
-    description: "Comment on an issue or pull request, in this account's repository or another (`repo`). The user sees the reply and says yes first. One reply per issue: a second on the same issue is refused."
+    description: "Comment on an issue or pull request, in the project's repository or another (`repo`). The user sees the reply and says yes first. One reply per issue: a second on the same issue is refused."
     role: reply
     target: "{{repo|${GITHUB_REPO}}}#{{number}}"
-    input: { type: object, properties: { repo: { type: string, description: "owner/name; this account's repository when left out" }, number: { type: integer }, body: { type: string, description: "Markdown" } }, required: [number, body] }
+    input: { type: object, properties: { repo: { type: string, description: "owner/name; the project's repository when left out" }, number: { type: integer }, body: { type: string, description: "Markdown" } }, required: [number, body] }
     request: { method: POST, url: "https://api.github.com/repos/{{repo|${GITHUB_REPO}}}/issues/{{number}}/comments", headers: { Authorization: "Bearer ${GITHUB_TOKEN}", Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }, json: { body: "{{body}}" }, timeout_s: 30 }
     result: { text: /html_url }
   - name: gh_set_topics
@@ -236,7 +227,7 @@ tools:
     result: { text: /html_url }
   - name: gh_create_issue
     label: Opening an issue in the repository
-    description: "Open an issue in this account's repository: a bug a user reported elsewhere, a task, a question to track. Asks first; one per title."
+    description: "Open an issue in the project's repository: a bug a user reported elsewhere, a task, a question to track. Asks first; one per title."
     role: manage
     target: "${GITHUB_REPO}: {{title}}"
     input: { type: object, properties: { title: { type: string }, body: { type: string, description: "Markdown" }, labels: { type: array, items: { type: string } } }, required: [title, body] }
@@ -244,7 +235,7 @@ tools:
     result: { text: /html_url }
   - name: gh_update_issue
     label: Updating an issue
-    description: "Change an issue or pull request in this account's repository: its labels (replaced), assignees (replaced), or close or reopen it (`state`). Asks first."
+    description: "Change an issue or pull request in the project's repository: its labels (replaced), assignees (replaced), or close or reopen it (`state`). Asks first."
     role: manage
     target: "${GITHUB_REPO}#{{number}} {{state}} {{labels}} {{assignees}}"
     input: { type: object, properties: { number: { type: integer }, state: { type: string, enum: [open, closed] }, state_reason: { type: string, enum: [completed, not_planned] }, labels: { type: array, items: { type: string } }, assignees: { type: array, items: { type: string } } }, required: [number] }
@@ -252,7 +243,7 @@ tools:
     result: { text: /html_url }
   - name: gh_review_pr
     label: Reviewing a pull request
-    description: "Review a pull request in this account's repository: a comment (default), or approve (only when the user asked). Never asks for changes on someone's behalf. Asks first; one review per pull request."
+    description: "Review a pull request in the project's repository: a comment (default), or approve (only when the user asked). Never asks for changes on someone's behalf. Asks first; one review per pull request."
     role: reply
     target: "${GITHUB_REPO}#{{number}} review"
     input: { type: object, properties: { number: { type: integer }, body: { type: string, description: "Markdown: what was checked and what was found" }, event: { type: string, enum: [COMMENT, APPROVE] } }, required: [number, body] }
@@ -261,7 +252,7 @@ tools:
   # ------------------------------------------- changes go in as pull requests
   - name: gh_open_pr
     label: Proposing a change as a pull request
-    description: "Write files (new or replaced: read each first with `gh_file`) in one commit on a new branch of this account's repository and open a pull request for it: a page and the index that links it, the changelog, a README section. Nothing is merged: a maintainer merges. Asks first."
+    description: "Write files (new or replaced: read each first with `gh_file`) in one commit on a new branch of the project's repository and open a pull request for it: a page and the index that links it, the changelog, a README section. Nothing is merged: a maintainer merges. Asks first."
     role: manage
     target: "${GITHUB_REPO} {{branch}}"
     input:

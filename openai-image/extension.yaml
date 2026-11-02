@@ -1,16 +1,14 @@
 # OpenAI's image model. Good at text in images and product shots.
 id: openai-image
 name: Create images with OpenAI
-version: 0.1.1
+version: 0.2.0
 summary: Images from a prompt with gpt-image-1. About $0.04 to $0.17 per image.
 categories: [images]
 avatar: avatar.svg
 icon: image
-service: { id: openai-image, name: OpenAI, icon: image, group: tools }
 transport: http
 homepage: https://platform.openai.com/docs/guides/image-generation
-auth:
-  - { env: OPENAI_API_KEY, label: OpenAI API key, help: https://platform.openai.com/api-keys }
+# Uses KIQR's own OpenAI key (Settings → Models), like the model provider.
 hosts: [api.openai.com]
 provides:
   image:

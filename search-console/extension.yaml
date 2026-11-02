@@ -1,43 +1,27 @@
-# Google Search Console. Connect with Google in one click (kiqr.cloud holds
-# KIQR's Google app and finishes the sign-in; no token is kept there), or use
-# a service account's key file on this machine. Either way the account then
-# picks one of the properties it can see. Clicks, impressions, CTR and
+# Google Search Console. Sign in with Google in one click from the Vault
+# (kiqr.cloud holds KIQR's Google app and finishes the sign-in; no token is
+# kept there); the project then picks one of the properties it can see. Clicks, impressions, CTR and
 # position per day, plus the top queries and pages.
 id: search-console
 name: Read Google Search Console
-version: 0.5.1
-summary: "Clicks, impressions, click-through rate and average position per day, with the top queries and pages, once a day into Performance. Connect with Google in one click, or use a service account."
+version: 0.6.0
+summary: "Clicks, impressions, click-through rate and average position per day, with the top queries and pages, once a day into Performance. Sign in with Google in one click."
 categories: [analytics, seo]
 avatar: avatar.svg
 icon: search
-# Shares the project's Google account with Google Analytics (the same sign-in,
-# the same tokens); the Search Console property is a place on the account.
-service: { id: google, name: Google, icon: globe, group: numbers }
+# One Google sign-in serves this and Google Analytics; the property is the project's setting.
 transport: http
 homepage: https://developers.google.com/webmaster-tools/v1/searchanalytics/query
 hosts: [searchconsole.googleapis.com, oauth2.googleapis.com]
-auth:
-  # Kept by "Connect with Google"; never typed. Shared with Google Analytics.
-  - { env: GOOGLE_TOKEN, label: Google sign-in, optional: true }
-  - env: GOOGLE_SERVICE_ACCOUNT_FILE
-    label: Service account key file
-    optional: true
-    help: "Instead of connecting with Google: the path on this machine to the JSON key of a service account added as a user on the property"
-connect:
-  # One click: kiqr.cloud holds the Google app, the browser comes back through its relay.
-  - label: Connect with Google
-    flow: cloud
+# One "Sign in with Google" through kiqr.cloud, kept in the Vault; both
+# read-only scopes, so one sign-in serves Analytics and Search Console.
+credentials:
+  - template: oauth
     provider: google
+    hosts: [googleapis.com]
     scopes: [https://www.googleapis.com/auth/analytics.readonly, https://www.googleapis.com/auth/webmasters.readonly]
-    token_env: GOOGLE_TOKEN
-    refresh_env: GOOGLE_REFRESH_TOKEN
-  # Or a service account: KIQR signs a JWT with the key file and exchanges it
-  # for a token at Google, offered to the requests as ${GOOGLE_TOKEN} (never stored).
-  - flow: service_account
-    key_file: GOOGLE_SERVICE_ACCOUNT_FILE
-    token_url: https://oauth2.googleapis.com/token
-    scopes: [https://www.googleapis.com/auth/analytics.readonly, https://www.googleapis.com/auth/webmasters.readonly]
-    token_env: GOOGLE_TOKEN
+    for: Read your searches
+    env: { GOOGLE_TOKEN: token }
 # What the project picks once: its Search Console property, from those the
 # Google account can see. Kept in the project, not on the account. `{{site}}`
 # in the calls below.

@@ -2,21 +2,22 @@
 # new posts, a search, finding subreddits, a thread; a comment and a post, each
 # behind a card. One account is one Reddit login and knows nothing of
 # subreddits: every call names its own, and the ones worth coming back to are
-# communities in the project's Audience.
+# the project's third-party channels.
 # Uses old.reddit.com, whose markup is plain and stable.
 id: reddit-browser
 name: Read, reply and post on Reddit
-version: 0.3.2
-summary: "Your Reddit account in a browser of Seemo's own: it finds subreddits, reads and searches them, comments and posts as you, asking first until you let it act on its own in the communities of your Audience. Sign in once; the login is kept."
+version: 0.4.0
+summary: "Your Reddit account in a browser of Seemo's own: it finds subreddits, reads and searches them, comments and posts as you, asking first until you let it act on its own in a channel. Sign in once; the login is kept."
 categories: [social]
 icon: messages-square
 avatar: avatar.svg
 transport: mcp
 program: browser
-service: { id: reddit, name: Reddit, icon: messages-square, group: social, profile_hosts: [reddit.com] }
 exclusive: true
 daily_cap: 10
 hosts: [reddit.com, old.reddit.com, www.reddit.com]
+credentials:
+  - { template: login, hosts: [reddit.com], for: Sign in to read, comment and post as you }
 url_args: [url]
 expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_screenshot]
 session:

@@ -1,16 +1,15 @@
 # fal.ai: Flux and friends behind one key. Images in a few seconds, paid per use.
 id: fal-image
 name: Create images with fal.ai
-version: 0.1.1
+version: 0.2.0
 summary: Photos and illustrations from a text prompt. About $0.03 per image.
 categories: [images]
 avatar: avatar.svg
 icon: image
-service: { id: fal-image, name: fal.ai, icon: image, group: tools }
 transport: http
 homepage: https://fal.ai
-auth:
-  - { env: FAL_KEY, label: fal.ai API key, help: https://fal.ai/dashboard/keys }
+credentials:
+  - { template: api_key, hosts: [fal.ai, fal.run], for: Make images, env: { FAL_KEY: key } }
 hosts: [fal.run, fal.media]
 provides:
   image:

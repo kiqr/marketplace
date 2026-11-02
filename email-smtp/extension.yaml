@@ -1,24 +1,21 @@
 # Email over SMTP. Works with Gmail (an app password), Fastmail, Outlook,
-# or any mail host. The account is the sender: Seemo sends from it to an
-# address, or to everyone on one of the project's lists (one message each).
-# Values live in .env; the daemon sends.
+# or any mail host. A mail server from the Vault is the sender: Seemo sends
+# from it to an address, or to everyone on a mailing list (one message each).
+# The daemon sends; the values never reach the model.
 id: kiqr-smtp
 name: Send email from your mail account
-version: 0.4.0
-summary: "Email over SMTP from your own address: Gmail with an app password, Fastmail, Outlook or any mail host. Send to anyone, or to a list of people you keep under Audience. Every send asks you first until you say otherwise."
+version: 0.5.0
+summary: "Email over SMTP from your own address: Gmail with an app password, Fastmail, Outlook or any mail host. Send to anyone, or to a mailing list you keep under Channels. Every send asks you first until you say otherwise."
 categories: [email, publishing]
 avatar: avatar.svg
 icon: mail
-service: { id: kiqr-smtp, name: Email, icon: mail, group: email }
 transport: smtp
 homepage: https://support.google.com/accounts/answer/185833
-auth:
-  - { env: SMTP_HOST, label: Mail server, placeholder: "smtp.gmail.com" }
-  - { env: SMTP_PORT, label: Port, placeholder: "587", optional: true }
-  - { env: SMTP_USER, label: User name, placeholder: "you@yourcompany.com", help: "Leave the user name and password empty only for a relay on this machine that asks for none", optional: true }
-  - { env: SMTP_PASSWORD, label: Password or app password, help: "Gmail needs an app password: https://myaccount.google.com/apppasswords", optional: true }
-  - { env: SMTP_FROM, label: From address, placeholder: "Your Name <you@yourcompany.com>", optional: true }
-  - { env: SMTP_SECURITY, label: Security, help: "starttls for port 587, tls for 465, none only for a relay on this machine", optional: true, options: [starttls, tls, none] }
+# The mail server is a credential in the Vault (a mail server, any host).
+credentials:
+  - template: smtp
+    for: Send email as you
+    env: { SMTP_HOST: host, SMTP_PORT: port, SMTP_USER: username, SMTP_PASSWORD: password, SMTP_FROM: from, SMTP_SECURITY: security }
 smtp:
   host: "${SMTP_HOST}"
   port: "${SMTP_PORT}"
@@ -30,8 +27,8 @@ provides:
   email:
     cost: free
 kinds:
-  # The account is the sender. Where a message goes is said per send (`to`),
-  # or is a list in the Audience, sent from this account.
+  # The mail server is the sender. Where a message goes is said per send (`to`),
+  # or is a mailing list channel, sent from its mail server.
   - kind: email
     label: Email
     icon: mail

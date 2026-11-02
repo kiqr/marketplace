@@ -1,33 +1,40 @@
 # Publish articles to a WordPress site through its REST API, with an
-# application password. Each account is one site.
+# application password from the Vault. The site is the project's setting.
 id: wordpress
 name: Publish articles to WordPress
-version: 0.4.0
-summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Connect each site as an account with one button. Every publish asks you first until you say otherwise."
+version: 0.5.0
+summary: "Articles from the library become WordPress posts, as drafts unless you say otherwise. Connect each site with one button, or give it an application password from the Vault. Every publish asks you first until you say otherwise."
 categories: [publishing]
 avatar: avatar.svg
 icon: newspaper
-service: { id: wordpress, name: WordPress, icon: newspaper, group: website }
 transport: http
 homepage: https://wordpress.org/documentation/article/application-passwords/
-auth:
-  - { env: WP_SITE, label: Your site's address, placeholder: "https://yoursite.com" }
-  - { env: WP_USER, label: User name, placeholder: "Your WordPress user name" }
-  - { env: WP_APP_PASSWORD, label: Application password, help: "Users → Profile → Application Passwords in wp-admin" }
+# An application password for the site (Users → Profile → Application
+# Passwords in wp-admin), kept in the Vault for the site's domain.
+credentials:
+  - template: app_password
+    for: Publish posts on your site
+    env: { WP_USER: username, WP_APP_PASSWORD: password }
+    # One click: WordPress's own "authorize application" page makes the app
+    # password and sends it back; it becomes the credential, for this site.
+    # WordPress only sends it back over https; on a plain-http KIQR the page
+    # shows it once and the user types it into the Vault's form.
+    connect:
+      label: Connect with WordPress
+      flow: redirect
+      needs: [WP_SITE]
+      url: "${WP_SITE}/wp-admin/authorize-application.php?app_name=KIQR&app_id={{app_id}}"
+      callback_params: [success_url, reject_url]
+      callback: https
+      returns: { WP_SITE: site_url, WP_USER: user_login, WP_APP_PASSWORD: password }
+      denied: { param: success, equals: "false" }
+settings:
+  wp_site: { label: Your site's address, placeholder: "https://yoursite.com" }
 hosts: ["${WP_SITE}"]
 # One button instead of the three keys: WordPress's own "Authorize application"
 # page (WordPress 5.6 and later) makes an application password for KIQR and
 # sends it back. WordPress only sends it back over https; on a plain-http KIQR
 # the page shows it once and the user pastes it.
-connect:
-  label: Connect with WordPress
-  flow: redirect
-  needs: [WP_SITE]
-  url: "${WP_SITE}/wp-admin/authorize-application.php?app_name=KIQR&app_id={{app_id}}"
-  callback_params: [success_url, reject_url]
-  callback: https
-  returns: { WP_SITE: site_url, WP_USER: user_login, WP_APP_PASSWORD: password }
-  denied: { param: success, equals: "false" }
 tools:
   - name: publish_article
     label: Publishing to WordPress
@@ -55,7 +62,7 @@ tools:
         save: { link: /link }
     result: { text: "{{post.link}}" }
 kinds:
-  # One account is one site: connecting it puts its blog in the Audience.
+  # The site is the channel: its blog is where posts go.
   # Draft or live is chosen per publish (the tool's `status`), not per site.
   - kind: wordpress
     label: Blog
