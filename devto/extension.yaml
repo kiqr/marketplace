@@ -1,0 +1,46 @@
+# DEV (dev.to) through the Forem API: one request makes the article from
+# Markdown, as a draft unless the call says publish. The API key comes from
+# Settings → Extensions → DEV Community API Keys, kept in the Vault for dev.to.
+# The asset's image is not sent: DEV takes a cover only by URL.
+id: devto
+name: Publish articles to DEV
+version: 0.1.0
+summary: "Articles from the library become posts on dev.to, as drafts unless you say otherwise. Give it an API key from Settings → Extensions. Every publish asks you first until you say otherwise."
+categories: [publishing]
+avatar: avatar.svg
+icon: code
+transport: http
+homepage: https://developers.forem.com/api/v1
+hosts: [dev.to]
+credentials:
+  - template: api_key
+    hosts: [dev.to]
+    for: Publish as you
+    env: { DEVTO_KEY: key }
+tools:
+  - name: publish_article
+    label: Publishing to DEV
+    description: Create an article from a title and Markdown body; `publish` true makes it live, otherwise it is a draft in the account.
+    input: { type: object, properties: { title: { type: string }, text: { type: string, description: "The article, Markdown" }, publish: { type: boolean, description: "true only when the user asked for it to go live" } }, required: [title, text] }
+    request:
+      method: POST
+      url: https://dev.to/api/articles
+      headers: { api-key: "${DEVTO_KEY}", Content-Type: application/json, Accept: application/vnd.forem.api-v1+json }
+      # `published` is left out when the call does not say, and DEV's default is a draft.
+      json: { article: { title: "{{title}}", body_markdown: "{{text}}", published: "{{publish}}", description: "{{summary}}" } }
+      timeout_s: 60
+    result: { text: /url }
+kinds:
+  # The account's profile is the channel: articles go out under it.
+  - kind: devto
+    label: Profile
+    name: DEV
+    icon: code
+    section: page
+    publish: publish_article
+    url: "https://dev.to/{{username}}"
+    target:
+      username: { label: Username, help: "Your DEV username, as in dev.to/username", placeholder: "acme", pattern: "^[A-Za-z0-9_]{1,30}$" }
+    target_from:
+      url: "dev.to/{username}"
+service: { id: devto, name: DEV, icon: code, group: website, profile_hosts: [dev.to] }
