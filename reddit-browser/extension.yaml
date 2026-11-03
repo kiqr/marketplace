@@ -6,8 +6,8 @@
 # Uses old.reddit.com, whose markup is plain and stable.
 id: reddit-browser
 name: Read, reply and post on Reddit
-version: 0.4.2
-summary: "Your Reddit account in a browser of Seemo's own: it finds subreddits, reads and searches them, comments and posts as you, asking first until you let it act on its own in a channel. Sign in once; the login is kept."
+version: 0.5.0
+summary: "Your Reddit account in a browser of Seemo's own: it finds subreddits, reads and searches them, comments and posts as you, asking first until you let it act on its own in a channel. Sign in once; the login is kept. Needs KIQR 0.6.0 or later."
 categories: [social]
 icon: messages-square
 avatar: avatar.svg
@@ -17,7 +17,7 @@ exclusive: true
 daily_cap: 10
 hosts: [reddit.com, old.reddit.com, www.reddit.com]
 credentials:
-  - { template: login, hosts: [reddit.com], for: Sign in to read, comment and post as you }
+  - { template: login, hosts: [reddit.com], for: "Sign in to read, comment and post as you" }
 url_args: [url]
 expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_screenshot]
 session:
@@ -75,31 +75,29 @@ tools:
       - { name: open, call: browser_navigate, args: { url: "{{url}}", wait_until: domcontentloaded } }
       - { name: text, call: browser_read_text, args: { selector: ".content" } }
     result: { text: /text }
+  # Acting is a goal a model reaches in the browser, page by page: no selectors to go stale.
+  # KIQR types the approved text itself and checks it before the last click.
   - name: reply
     label: Commenting on Reddit
     description: Comment on a post as the connected account. The user sees the comment on a card first.
     role: reply
     target: "{{post_url}}"
     input: { type: object, properties: { post_url: { type: string }, text: { type: string } }, required: [post_url, text] }
-    steps:
-      - { name: open, call: browser_navigate, args: { url: "{{post_url}}", wait_until: domcontentloaded } }
-      - { name: type, call: browser_type, args: { selector: ".commentarea textarea[name='text']", text: "{{text}}" } }
-      - { name: send, call: browser_click, args: { selector: ".commentarea .usertext-buttons button[type='submit']" } }
-      - { name: shot, call: browser_take_screenshot }
-    result: { text: "Commented on {{post_url}}" }
+    hand:
+      goal: "Comment on the Reddit post at {{post_url}} with the approved text, as the signed-in account"
+      start: "{{post_url}}"
   - name: post
     label: Posting on Reddit
     description: Publish a text post to a subreddit as the connected account.
     role: publish
     target: "r/{{subreddit}}/{{title}}"
     input: { type: object, properties: { title: { type: string }, text: { type: string }, subreddit: { type: string, description: "Without r/" } }, required: [title, text, subreddit] }
-    steps:
-      - { name: open, call: browser_navigate, args: { url: "https://old.reddit.com/r/{{subreddit}}/submit?selftext=true", wait_until: domcontentloaded } }
-      - { name: title, call: browser_type, args: { selector: "textarea[name='title']", text: "{{title}}" } }
-      - { name: body, call: browser_type, args: { selector: "textarea[name='text']", text: "{{text}}" } }
-      - { name: send, call: browser_click, args: { selector: "button[name='submit']" } }
-      - { name: shot, call: browser_take_screenshot }
-    result: { text: "Posted to r/{{subreddit}}" }
+    hand:
+      goal: "Submit a text post to r/{{subreddit}} with the approved title and text, as the signed-in account"
+      start: "https://www.reddit.com/r/{{subreddit}}/submit"
+      # A text post: Reddit reads a marketing card as an ad.
+      image: none
+      hints: "Some subreddits require a flair: pick the one closest to the post."
 kinds:
   - kind: reddit
     label: Subreddit

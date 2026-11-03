@@ -1,12 +1,12 @@
 # X (Twitter) through the browser KIQR hosts, signed in as the user: the home
 # timeline, a search, a thread; a reply and a post, each behind a card. One
 # account is one X login; its profile lives with the account. The sign-in is
-# read by the model page by page; the acting steps name X's own markup
-# (data-testid attributes), so when X changes those, this file does.
+# read by the model page by page, and so is each reply and post: a goal the
+# model reaches in the browser, with no selectors to go stale. Needs KIQR 0.6.0.
 id: x-browser
 name: Read, reply and post on X
-version: 0.4.4
-summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
+version: 0.5.0
+summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept. Needs KIQR 0.6.0 or later."
 categories: [social]
 icon: message-circle
 avatar: avatar.svg
@@ -16,7 +16,7 @@ exclusive: true
 daily_cap: 15
 hosts: [x.com, twitter.com]
 credentials:
-  - { template: login, hosts: [x.com], for: Sign in to read, reply and post as you }
+  - { template: login, hosts: [x.com], for: "Sign in to read, reply and post as you" }
 url_args: [url]
 expose: [browser_navigate, browser_read_text, browser_snapshot, browser_take_screenshot]
 session:
@@ -66,37 +66,26 @@ tools:
       - { name: open, call: browser_navigate, args: { url: "{{url}}", wait_until: domcontentloaded } }
       - { name: text, call: browser_read_text, args: { selector: "main" } }
     result: { text: /text }
+  # Acting is a goal a model reaches in the browser, page by page: no selectors to go stale.
+  # KIQR types the approved text itself and checks it before the last click.
   - name: reply
     label: Replying on X
     description: Reply to a post as the connected account. The user sees the reply on a card first.
     role: reply
     target: "{{post_url}}"
     input: { type: object, properties: { post_url: { type: string }, text: { type: string, description: "The reply, at most 280 characters" } }, required: [post_url, text] }
-    steps:
-      - { name: open, call: browser_navigate, args: { url: "{{post_url}}", wait_until: domcontentloaded } }
-      - { name: box, call: browser_click, args: { selector: "[data-testid='tweetTextarea_0']" } }
-      - { name: type, call: browser_type, args: { selector: "[data-testid='tweetTextarea_0']", text: "{{text}}" } }
-      - { name: send, call: browser_click, args: { selector: "[data-testid='tweetButtonInline']" } }
-      # X empties the box once it has the reply; still holding it means it never went out.
-      - { name: sent, call: browser_evaluate, args: { expression: "new Promise((ok, no) => { const t = Date.now(); (function w() { const b = document.querySelector(\"[data-testid='tweetTextarea_0']\"); if (!b || !b.innerText.trim()) ok('sent'); else if (Date.now() - t > 30000) no(new Error('X did not take the reply: the text is still in the box')); else setTimeout(w, 500); })(); })" } }
-      - { name: shot, call: browser_take_screenshot }
-    result: { text: "Replied on {{post_url}}" }
+    hand:
+      goal: "Reply to the post at {{post_url}} with the approved text, as the signed-in account"
+      start: "{{post_url}}"
   - name: post
     label: Posting on X
     description: Publish a post as the connected account, with the asset's first image when it has one.
     role: publish
     input: { type: object, properties: { text: { type: string }, image: { type: string } } }
-    steps:
-      - { name: open, call: browser_navigate, args: { url: "https://x.com/compose/post", wait_until: domcontentloaded } }
-      # The composer opens over the home timeline, which has a box of its own: everything is done in the dialog.
-      - { name: type, call: browser_type, args: { selector: "[role='dialog'] [data-testid='tweetTextarea_0']", text: "{{text}}" } }
-      # X's file input is hidden; the button beside it opens the file chooser (found by place, not its words, so any language works).
-      - { name: image, call: browser_upload_files, args: { selector: "[role='dialog'] div:has(> input[data-testid='fileInput']) > button", paths: ["${KIQR_PROJECT_DIR}/assets/{{asset.type}}/{{asset.id}}/{{image}}"] }, when: "{{image}}" }
-      - { name: send, call: browser_click, args: { selector: "[role='dialog'] [data-testid='tweetButton']" } }
-      # X closes the composer once it has the post; still open means it never went out (an image still uploading, a limit).
-      - { name: sent, call: browser_evaluate, args: { expression: "new Promise((ok, no) => { const t = Date.now(); (function w() { if (!location.pathname.startsWith('/compose')) ok('sent'); else if (Date.now() - t > 30000) no(new Error('X did not take the post: the composer is still open')); else setTimeout(w, 500); })(); })" } }
-      - { name: shot, call: browser_take_screenshot }
-    result: { text: "Posted on X" }
+    hand:
+      goal: "Publish a post on X with the approved text and the approved image, as the signed-in account"
+      start: "https://x.com/compose/post"
+      image: required
 kinds:
   # The account is the profile: connecting it puts it in the Audience.
   - kind: x
