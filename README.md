@@ -83,8 +83,10 @@ the KIQR repository; the folders here are worked examples.
   under the `media` category.
 - Sending the asset's image, or a call that takes several requests
   (register an upload, send the bytes, create the post)? Use `steps` and the
-  upload bodies (`multipart`, `form`, `body_file`); see "Steps" and
-  "Uploading files" in `docs/abilities.md`. `wordpress/` is a worked example.
+  upload bodies (`multipart`, `form`, `body_file`); a step runs `when` a
+  template fills to something and is skipped `unless` it does (KIQR 0.6.0 or
+  later); see "Steps" and "Uploading files" in `docs/abilities.md`.
+  `wordpress/` is a worked example, `telegram/` one with both branches.
 - Give each key a `placeholder` (what a value looks like, shown inside the
   empty field) and keep `help` for where to get it. Destination fields take
   the same two.
