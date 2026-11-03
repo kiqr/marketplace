@@ -5,7 +5,7 @@
 # (data-testid attributes), so when X changes those, this file does.
 id: x-browser
 name: Read, reply and post on X
-version: 0.4.3
+version: 0.4.4
 summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
 categories: [social]
 icon: message-circle
@@ -88,9 +88,11 @@ tools:
     input: { type: object, properties: { text: { type: string }, image: { type: string } } }
     steps:
       - { name: open, call: browser_navigate, args: { url: "https://x.com/compose/post", wait_until: domcontentloaded } }
-      - { name: type, call: browser_type, args: { selector: "[data-testid='tweetTextarea_0']", text: "{{text}}" } }
-      - { name: image, call: browser_upload_files, args: { selector: "input[data-testid='fileInput']", paths: ["${KIQR_PROJECT_DIR}/assets/{{asset.type}}/{{asset.id}}/{{image}}"] }, when: "{{image}}" }
-      - { name: send, call: browser_click, args: { selector: "[data-testid='tweetButton']" } }
+      # The composer opens over the home timeline, which has a box of its own: everything is done in the dialog.
+      - { name: type, call: browser_type, args: { selector: "[role='dialog'] [data-testid='tweetTextarea_0']", text: "{{text}}" } }
+      # X's file input is hidden; the button beside it opens the file chooser (found by place, not its words, so any language works).
+      - { name: image, call: browser_upload_files, args: { selector: "[role='dialog'] div:has(> input[data-testid='fileInput']) > button", paths: ["${KIQR_PROJECT_DIR}/assets/{{asset.type}}/{{asset.id}}/{{image}}"] }, when: "{{image}}" }
+      - { name: send, call: browser_click, args: { selector: "[role='dialog'] [data-testid='tweetButton']" } }
       # X closes the composer once it has the post; still open means it never went out (an image still uploading, a limit).
       - { name: sent, call: browser_evaluate, args: { expression: "new Promise((ok, no) => { const t = Date.now(); (function w() { if (!location.pathname.startsWith('/compose')) ok('sent'); else if (Date.now() - t > 30000) no(new Error('X did not take the post: the composer is still open')); else setTimeout(w, 500); })(); })" } }
       - { name: shot, call: browser_take_screenshot }
