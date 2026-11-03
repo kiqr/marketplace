@@ -96,6 +96,10 @@ the KIQR repository; the folders here are worked examples.
   sites, two mail accounts), and for a publishing ability each channel is
   one account. So `auth` and `connect` describe a single account, and the
   summary says "add a channel per site", not "connect your site".
+- Instructions on their own (a `SKILL.md`, no manifest) are an ability too:
+  the index entry says `transport: instructions` and leaves `hosts` and
+  `credentials` empty; the `description` in its frontmatter is what Seemo
+  sees as the moment it applies. `seo-articles/` is the worked example.
 - Add an entry to `index.json` with the same `id`, your `repo` and the
   folder as `path`. Copy a neighbouring entry and change every field; the
   entry is what the card shows before the ability is installed, so it must
