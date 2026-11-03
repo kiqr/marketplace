@@ -5,7 +5,7 @@
 # (data-testid attributes), so when X changes those, this file does.
 id: x-browser
 name: Read, reply and post on X
-version: 0.4.2
+version: 0.4.3
 summary: "Your X account in a browser of Seemo's own: it reads your timeline and searches, replies and posts as you, each asking first until you say otherwise. Sign in once; the login is kept."
 categories: [social]
 icon: message-circle
@@ -77,6 +77,8 @@ tools:
       - { name: box, call: browser_click, args: { selector: "[data-testid='tweetTextarea_0']" } }
       - { name: type, call: browser_type, args: { selector: "[data-testid='tweetTextarea_0']", text: "{{text}}" } }
       - { name: send, call: browser_click, args: { selector: "[data-testid='tweetButtonInline']" } }
+      # X empties the box once it has the reply; still holding it means it never went out.
+      - { name: sent, call: browser_evaluate, args: { expression: "new Promise((ok, no) => { const t = Date.now(); (function w() { const b = document.querySelector(\"[data-testid='tweetTextarea_0']\"); if (!b || !b.innerText.trim()) ok('sent'); else if (Date.now() - t > 30000) no(new Error('X did not take the reply: the text is still in the box')); else setTimeout(w, 500); })(); })" } }
       - { name: shot, call: browser_take_screenshot }
     result: { text: "Replied on {{post_url}}" }
   - name: post
@@ -89,6 +91,8 @@ tools:
       - { name: type, call: browser_type, args: { selector: "[data-testid='tweetTextarea_0']", text: "{{text}}" } }
       - { name: image, call: browser_upload_files, args: { selector: "input[data-testid='fileInput']", paths: ["${KIQR_PROJECT_DIR}/assets/{{asset.type}}/{{asset.id}}/{{image}}"] }, when: "{{image}}" }
       - { name: send, call: browser_click, args: { selector: "[data-testid='tweetButton']" } }
+      # X closes the composer once it has the post; still open means it never went out (an image still uploading, a limit).
+      - { name: sent, call: browser_evaluate, args: { expression: "new Promise((ok, no) => { const t = Date.now(); (function w() { if (!location.pathname.startsWith('/compose')) ok('sent'); else if (Date.now() - t > 30000) no(new Error('X did not take the post: the composer is still open')); else setTimeout(w, 500); })(); })" } }
       - { name: shot, call: browser_take_screenshot }
     result: { text: "Posted on X" }
 kinds:
