@@ -1,6 +1,6 @@
 ---
 name: Write SEO-friendly articles for websites
-description: "Before writing an article, blog post, guide or launch announcement for a website (a draft article asset): how to write it so it ranks for the search it answers and reads as the work of people who know, by Google's own guidelines, E-E-A-T first."
+description: "Before writing an article, blog post, guide or announcement for a website (a draft article asset): how to make it rank for the search it answers and read as the work of people who know, E-E-A-T first."
 categories: [writing]
 icon: search-check
 author: KIQR
@@ -21,7 +21,7 @@ The mechanics the rest of this text assumes.
 3. Save with `create_asset`, `type: article`. For an article, **`title` is the headline exactly as it will be published**: a publish sends `title` as the page title to WordPress and DEV, so it is the title link in Google, not an internal label. (The "3 to 7 words, an internal label" rule for posts does not apply to articles.) The body starts with the first paragraph; headings are `##` and below; never a `# Title` line, because the publisher adds the title itself and a repeated top heading becomes a second H1. **`summary` is the meta description**, one or two true sentences about this page: a publish passes it as the article's description where the service takes one (DEV) and as the pull request body for a site built from a repository. `tags`: the channel's kind first, as `list_channels` names it, then the topic in one or two words.
 4. The cover comes right after the asset, by the `make-images` instructions (`create_image` with `asset` set): the editorial layout with the headline legible, or picture-led when Library → Media holds a real picture of the subject. Pictures inside the body only from `brand_kit`'s media, each with alt text that says what it shows.
 5. Links only to URLs that exist: the site's pages from `get_brief` (`topic_clusters[].urls`, `offerings[].url`), the source pages in the evidence, or a page you read with `read_url` in this session. Never a guessed path, never a page you have not seen.
-6. It is a draft. The user approves it in the chat, the library or To do; a publish is their yes on a card, and `status: publish` only when they asked for it to go live.
+6. It is a draft. The user approves it in the chat, the library or To do; a publish is their yes on a card, and a publisher's `status: publish` (WordPress) only when they asked for it to go live.
 7. In a task run nobody is reading along: do all of this, then report (see the last section).
 
 ## The Search Essentials
@@ -123,11 +123,11 @@ Google's own test, from "Creating helpful, reliable, people-first content". Its 
 - Is it mainly summarising what others say without adding much value?
 - Is the topic there because it is trending, not because the business would write about it for its audience?
 - Will readers feel they need to search again to get better information elsewhere?
-- Is it written to a word count? (Google: "No, we don't" have a preferred one.)
+- Is it written to a word count because Google is said to prefer one? (Google: "No, we don't.")
 - Is it a niche topic the business has no real expertise in, chosen for traffic?
 - Does it promise to answer a question that has no answer (a date nobody has confirmed)?
 - Is a date being changed to make a page seem fresh without substantial change?
-- Is content being added or removed in bulk to seem "fresh"? (Google: "No, it won't" help.)
+- Is a lot of content being added or removed to make the site seem "fresh" for rankings? (Google: "No, it won't.")
 
 Google's own note on SEO: things that help search engines discover and understand content are fine and useful when applied to people-first content; they are not a substitute for it.
 
