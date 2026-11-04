@@ -1,6 +1,6 @@
 ---
 name: Work on GitHub
-description: When the user asks about the product's GitHub repository (issues, pull requests, what shipped, stars, traffic), wants to answer people on GitHub, follow the repository's activity, propose a change as a pull request, or publish to a site built from a GitHub repository (in its own code: React pages, MDX, Hugo…).
+description: "When the user asks about the product's GitHub repository (issues, pull requests, what shipped, stars, traffic), wants to answer people on GitHub, follow the repository's activity, propose a change as a pull request, or publish to a site built from a GitHub repository (in its own code: React pages, MDX, Hugo…)."
 kinds: [github-repo]
 ---
 
