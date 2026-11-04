@@ -1,0 +1,153 @@
+# ElevenLabs through its REST API: voice-overs read by one of the account's
+# voices, sound effects and music, each saved as an mp3 on the asset it
+# belongs to (a video, an audio piece, an ad campaign). The API key comes from
+# the ElevenLabs dashboard (Developers → API keys) and goes in the Vault for
+# elevenlabs.io; the project picks a default voice once, under this ability's
+# settings, from the voices the key can see. Every answer that is audio lands
+# on the asset straight away, like an image from a generator; nothing here
+# cuts or mixes, the files are the parts an editor assembles. The free plan's
+# 10,000 credits a month are enough to try everything; using the audio
+# commercially needs a paid plan, and the instructions say so.
+id: elevenlabs
+name: Make voice-overs, sound effects and music with ElevenLabs
+version: 0.1.0
+summary: "Voice-overs in one of ElevenLabs' voices, sound effects and music beds for your videos, ads and audio, saved on the asset they belong to. Needs an ElevenLabs API key; the free plan's 10,000 credits a month are enough to try it (about 10,000 characters of speech), and using the audio commercially needs a paid plan."
+categories: [media]
+avatar: avatar.svg
+icon: audio-lines
+transport: http
+homepage: https://elevenlabs.io/docs/api-reference/text-to-speech/convert
+hosts: [api.elevenlabs.io]
+# One key for everything: speech, sound effects, music, the voices list and
+# the balance. Made under Developers → API keys in the ElevenLabs dashboard.
+credentials:
+  - template: api_key
+    hosts: [elevenlabs.io]
+    for: Make speech, sound effects and music
+    env: { ELEVENLABS_API_KEY: key }
+# The business speaks with one voice. Picked once per project from the voices
+# the key can see (ElevenLabs' own and the account's); a call may name another.
+settings:
+  elevenlabs_voice:
+    label: Default voice
+    help: "The voice the business speaks with. Pick it once the key is in; a voice-over may still name another voice."
+    optional: true
+    choices:
+      request: { method: GET, url: "https://api.elevenlabs.io/v2/voices?page_size=100&include_total_count=false", headers: { xi-api-key: "${ELEVENLABS_API_KEY}" } }
+      list: /voices/*
+      value: /voice_id
+      label: /name
+tools:
+  # Text to speech. The answer is the audio itself (audio/mpeg), so it lands
+  # on the asset as <name>.mp3. Settings with a default parse as numbers;
+  # previous_text and next_text are left out of the request when not given.
+  - name: speak
+    label: Making a voice-over
+    description: "Read a script aloud in one of the account's voices and save it as an mp3 on the asset in `asset` (a video, an audio piece, an ad campaign; create the asset first, it is where the file lands). `voice` is a voice_id from list_voices, the project's default voice when left out. One credit per character. `model` is eleven_multilingual_v2 by default (29 languages, up to 10,000 characters); eleven_v3 is the most expressive and takes audio tags such as [whispers] or [laughs] in the text (up to 5,000 characters). For a long script read in parts, pass `previous_text` and `next_text` so the parts join evenly."
+    input:
+      type: object
+      properties:
+        asset: { type: object, description: "The asset the file belongs to: its type and id", properties: { type: { type: string }, id: { type: string } }, required: [type, id] }
+        name: { type: string, description: "File name without extension, e.g. voiceover (default: speak)" }
+        text: { type: string, description: "The script, exactly as it should be read" }
+        voice: { type: string, description: "A voice_id from list_voices; the project's default voice when left out" }
+        model: { type: string, enum: [eleven_multilingual_v2, eleven_v3, eleven_flash_v2_5], description: "eleven_multilingual_v2 (default), eleven_v3 (most expressive, audio tags), eleven_flash_v2_5 (fast, cheaper)" }
+        stability: { type: number, description: "0 to 1: lower is more varied and emotional, higher is steadier (default 0.5)" }
+        style: { type: number, description: "0 to 1: how much of the voice's own style to exaggerate (default 0)" }
+        speed: { type: number, description: "0.7 to 1.2 (default 1)" }
+        previous_text: { type: string, description: "The text read just before this part, when a script is read in parts" }
+        next_text: { type: string, description: "The text that follows this part" }
+        format: { type: string, description: "mp3_44100_128 (default), mp3_44100_64 or mp3_22050_32; 192 kbps and wav need a paid plan" }
+      required: [asset, text]
+    attach: true
+    cost: one credit per character of text
+    request:
+      method: POST
+      url: "https://api.elevenlabs.io/v1/text-to-speech/{{voice|${ELEVENLABS_VOICE|JBFqnCBsd6RMkjVDRZzb}}}?output_format={{format|mp3_44100_128}}"
+      headers: { xi-api-key: "${ELEVENLABS_API_KEY}", Content-Type: application/json }
+      json:
+        text: "{{text}}"
+        model_id: "{{model|eleven_multilingual_v2}}"
+        previous_text: "{{previous_text}}"
+        next_text: "{{next_text}}"
+        voice_settings: { stability: "{{stability|0.5}}", similarity_boost: 0.75, style: "{{style|0}}", speed: "{{speed|1}}", use_speaker_boost: true }
+      timeout_s: 180
+  # Sound effects. `seconds` is left out of the request when not given and the
+  # model picks a length from the prompt; `loop` goes out only when set.
+  - name: sound_effect
+    label: Making a sound effect
+    description: "Make one sound effect from a description and save it as an mp3 on the asset in `asset` (create the asset first). Describe the action, the setting and the atmosphere (\"heavy wooden door creaking open, then footsteps on gravel\"), not a category. `seconds` is 0.5 to 30; left out, the length follows the prompt. `loop` makes an effect that repeats seamlessly, for ambience under a scene. 40 credits per second of the length you set, 200 when the length is left to the model."
+    input:
+      type: object
+      properties:
+        asset: { type: object, description: "The asset the file belongs to: its type and id", properties: { type: { type: string }, id: { type: string } }, required: [type, id] }
+        name: { type: string, description: "File name without extension, e.g. sfx-door (default: sound_effect)" }
+        text: { type: string, description: "What it should sound like: action, setting, atmosphere" }
+        seconds: { type: number, description: "Length, 0.5 to 30; left out, it follows the prompt" }
+        influence: { type: number, description: "0 to 1: how literally to follow the text (default 0.3); higher is more literal, less varied" }
+        loop: { type: boolean, description: "A seamlessly repeating effect (ambience, a hum, rain)" }
+        format: { type: string, description: "mp3_44100_128 (default), mp3_44100_64 or mp3_22050_32" }
+      required: [asset, text]
+    attach: true
+    cost: 40 credits per second (200 when the length is left to the model)
+    request:
+      method: POST
+      url: "https://api.elevenlabs.io/v1/sound-generation?output_format={{format|mp3_44100_128}}"
+      headers: { xi-api-key: "${ELEVENLABS_API_KEY}", Content-Type: application/json }
+      json:
+        text: "{{text}}"
+        duration_seconds: "{{seconds}}"
+        prompt_influence: "{{influence|0.3}}"
+        loop: "{{loop}}"
+        model_id: eleven_text_to_sound_v3
+      timeout_s: 120
+  # The voices the key can speak with: ElevenLabs' premade voices by default,
+  # the account's own with `category: cloned` (a paid plan). Each voice comes
+  # back whole (labels, languages, a preview), so ten at a time.
+  - name: list_voices
+    label: Listing voices
+    description: "The voices the account can speak with, ten at a time: ElevenLabs' premade voices by default, the account's own with `category` cloned, generated or professional. Each has a voice_id (what `speak` takes), a name, labels (gender, age, accent, use case), a description and a preview_url. `search` narrows by name or description; `next_page_token` from an answer gets the next ten."
+    input:
+      type: object
+      properties:
+        search: { type: string, description: "Part of a name or description" }
+        category: { type: string, enum: [premade, cloned, generated, professional], description: "premade (default): ElevenLabs' own voices; the others are the account's" }
+        page_size: { type: integer, description: "How many, up to 100 (default 10)" }
+        next_page_token: { type: string, description: "From the previous answer, for the next page" }
+      required: []
+    request:
+      method: GET
+      url: "https://api.elevenlabs.io/v2/voices?page_size={{page_size|10}}&category={{category|premade}}&search={{search}}&next_page_token={{next_page_token}}&include_total_count=false"
+      headers: { xi-api-key: "${ELEVENLABS_API_KEY}" }
+      timeout_s: 30
+  # The plan's balance, in one line.
+  - name: credits
+    label: Checking the ElevenLabs balance
+    description: "How many of the plan's credits are used this period, the limit, the plan, and when the count resets. Check it before a batch, and say what a batch will cost before making it."
+    input: { type: object, properties: {}, required: [] }
+    steps:
+      - name: user
+        request:
+          method: GET
+          url: https://api.elevenlabs.io/v1/user
+          headers: { xi-api-key: "${ELEVENLABS_API_KEY}" }
+          timeout_s: 30
+        save: { used: /subscription/character_count, limit: /subscription/character_limit, tier: /subscription/tier, status: /subscription/status, reset: /subscription/next_character_count_reset_unix }
+    result: { text: "{{user.used}} of {{user.limit}} credits used this period on the {{user.tier}} plan ({{user.status}}); the count resets at Unix time {{user.reset}}." }
+# "Make music" (create_music) through ElevenLabs: a prompt and a length. The
+# core tool's `seconds` becomes milliseconds through the table below; a length
+# not in it becomes 30 seconds, so the instructions name the lengths.
+provides:
+  music:
+    cost: about 900 credits per minute; commercial use needs a paid plan
+    map:
+      seconds: { "5": 5000, "10": 10000, "15": 15000, "20": 20000, "30": 30000, "45": 45000, "60": 60000, "90": 90000, "120": 120000, "180": 180000, "*": 30000 }
+    request:
+      method: POST
+      url: "https://api.elevenlabs.io/v1/music?output_format=mp3_44100_128"
+      headers: { xi-api-key: "${ELEVENLABS_API_KEY}", Content-Type: application/json }
+      json:
+        prompt: "{{prompt}}"
+        music_length_ms: "{{seconds}}"
+        model_id: music_v2_5
+      timeout_s: 300
